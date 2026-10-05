@@ -27,16 +27,19 @@ void	*vector_emplace(t_vector *this)
 
 void	vector_remove_index(t_vector *this, size_t find)
 {
-	void	*position;
+	unsigned char	*position;
+
 	if (find >= this->size)
 		return ;
+	position = vector_at(this, find);
+	if (this->destroy_element)
+		this->destroy_element(position);
 	if (find == this->size - 1)
 	{
 		this->size--;
 		return ;
 	}
 
-	position = vector_at(this, find);
 	memmove(
 		position,
 		position + this->element_size,
@@ -47,30 +50,27 @@ void	vector_remove_index(t_vector *this, size_t find)
 
 void	vector_remove_element(t_vector *this, void *find)
 {
-	void	*const element = vector_search(this, find);
+	unsigned char	*const element = vector_search(this, find);
 
 	if (!element)
 		return ;	
-
-	memmove(
-		element,
-		element + this->element_size,
-		vector_end(this) - (element + this->element_size)
-	);
-	this->size--;
+	vector_remove_index(this, (element - (unsigned char *)this->data)
+		/ this->element_size);
 }
 
 void	vector_mix_remove_index(t_vector *this, size_t index)
 {
-	void	*found;
+	unsigned char	*found;
 
 	found = vector_at(this, index);
 	if (!found)
 		return ;
+	if (this->destroy_element)
+		this->destroy_element(found);
 
 	memmove(
 		found,
-		vector_end(this) - this->element_size,
+		(unsigned char *)vector_end(this) - this->element_size,
 		this->element_size
 	);
 	this->size--;
@@ -78,28 +78,25 @@ void	vector_mix_remove_index(t_vector *this, size_t index)
 
 void	vector_mix_remove_element(t_vector *this, void *element)
 {
-	void	*const found = vector_search(this, element);
+	unsigned char	*const found = vector_search(this, element);
 
 	if (!found)
 		return ;
-
-	memmove(
-		found,
-		vector_end(this) - this->element_size,
-		this->element_size
-	);
-	this->size--;
+	vector_mix_remove_index(this, (found - (unsigned char *)this->data)
+		/ this->element_size);
 }
 
 void	vector_insert(t_vector *this, void *element, size_t index)
 {
-	void	*position_ptr;
+	unsigned char	*position_ptr;
 
 	if (index >= this->size)
 	{
 		vector_push_back(this, element);
 		return ;
 	}
+	if (this->size >= this->capacity)
+		vector_expand(this);
 
 	position_ptr = vector_at(this, index);
 	memmove(
@@ -111,11 +108,11 @@ void	vector_insert(t_vector *this, void *element, size_t index)
 	this->size++;
 }
 
-void	vector_for_each(t_vector *this, void *(*function)(void*, size_t))
+void	vector_for_each(t_vector *this, void (*function)(void*, size_t))
 {
-	void	*const end = vector_end(this);
-	void	*it;
-	size_t	index;
+	unsigned char	*const	end = vector_end(this);
+	unsigned char	*it;
+	size_t			index;
 
 	it = this->data;
 	index = 0;

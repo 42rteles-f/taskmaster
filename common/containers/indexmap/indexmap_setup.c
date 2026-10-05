@@ -17,11 +17,19 @@ t_indexmap	init_indexmap(size_t key_size, size_t value_size)
 	return ((t_indexmap) {
 		.keys = init_vector(key_size),
 		.values = init_vector(value_size),
-		.compare = NULL,
+		.set_compare = indexmap_set_compare,
+		.custom_keys = indexmap_custom_keys,
+		.custom_values = indexmap_custom_values,
 		.set = indexmap_set,
 		.get = indexmap_get,
 		.emplace = indexmap_emplace,
 		.remove = indexmap_remove,
+		.remove_at = indexmap_remove_at,
+		.has = indexmap_has,
+		.index_of = indexmap_index_of,
+		.key_at = indexmap_key_at,
+		.value_at = indexmap_value_at,
+		.at = indexmap_at,
 		.destroy = destroy_indexmap
 	});
 }
