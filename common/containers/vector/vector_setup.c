@@ -1,7 +1,25 @@
 #include "vector.h"
 
+void	vector_custom(t_vector *this, t_vector_copy copy,
+		t_vector_compare compare, t_vector_destroy_element destroy)
+{
+	if (copy)
+		this->copy = copy;
+	if (compare)
+		this->compare = compare;
+	this->destroy_element = destroy;
+}
+
 void	vector_destroy(t_vector *this)
 {
+	size_t	index;
+
+	index = 0;
+	while (this->destroy_element && index < this->size)
+	{
+		this->destroy_element(vector_at(this, index));
+		index++;
+	}
 	free(this->data);
 }
 
@@ -25,6 +43,8 @@ void	*vector_pointer_cpy(void *dest, void *src, size_t)
 
 t_vector	init_vector(size_t size)
 {
+	if (!size)
+		return ((t_vector){0});
 	return ((t_vector) {
 		.data = NULL,
 		.size = 0,
@@ -33,9 +53,11 @@ t_vector	init_vector(size_t size)
 		
 		.compare = memcmp,
 		.copy = memcpy,
+		.destroy_element = NULL,
 		.push = vector_push_back,
 		.get_index = vector_get_index,
 		.insert = vector_insert,
+		.emplace = vector_emplace,
 		.remove_at = vector_remove_index,
 		.remove_element = vector_remove_element,
 		.find = vector_search,
@@ -48,6 +70,17 @@ t_vector	init_vector(size_t size)
 	});
 }
 
+t_vector	*new_vector(size_t size)
+{
+	t_vector	*new;
+
+	if (!size)
+		return (NULL);
+	new = malloc(sizeof(t_vector));
+	*new = init_vector(size);
+	return (new);
+}
+
 t_vector	init_uvector(size_t size)
 {
 	t_vector	init;
@@ -56,15 +89,6 @@ t_vector	init_uvector(size_t size)
 	init.remove_at = vector_mix_remove_index;
 	init.remove_element = vector_mix_remove_element;
 	return (init);
-}
-
-t_vector	*new_vector(size_t size)
-{
-	t_vector	*new;
-
-	new = malloc(sizeof(t_vector));
-	*new = init_vector(size);
-	return (new);
 }
 
 t_uvector	*new_uvector(size_t size)

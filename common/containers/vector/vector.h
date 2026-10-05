@@ -17,6 +17,9 @@
 typedef struct s_vector	t_vector;
 typedef t_vector		t_uvector;
 typedef t_vector		t_pvector;
+typedef int			(*t_vector_compare)(const void *, const void *, size_t);
+typedef void			*(*t_vector_copy)(void *, const void *, size_t);
+typedef void			(*t_vector_destroy_element)(void *);
 
 struct s_hashpair {
 	size_t	key;
@@ -28,14 +31,15 @@ struct s_vector {
 	size_t	size;
 	size_t	capacity;
 	size_t	element_size;
-	int		(*compare)(const void*, const void*, size_t);
-	void	*(*copy)(void*, const void*, size_t);
+	t_vector_compare		compare;
+	t_vector_copy			copy;
+	t_vector_destroy_element	destroy_element;
 
 	void	*(*push)(t_vector*, void*);
 	void	*(*emplace)(t_vector*);
 	void	(*push_batch)(t_vector*, void*, size_t);
 	void	(*insert)(t_vector*, void*, size_t);
-	void	(*for_each)(t_vector*, void*(*)(void*, size_t));
+	void	(*for_each)(t_vector*, void(*)(void*, size_t));
 	void	(*remove_at)(t_vector*, size_t);
 	void	(*remove_element)(t_vector*, void*);
 	void	*(*find)(const t_vector *const, const void *const);
@@ -53,6 +57,8 @@ t_uvector	*new_uvector(size_t size);
 void		vector_expand(t_vector *this);
 void		vector_destroy(t_vector *this);
 void		delete_vector(t_vector *this);
+void		vector_custom(t_vector *this, t_vector_copy copy,
+				t_vector_compare compare, t_vector_destroy_element destroy);
 
 //vector_get.c
 void		*vector_end(const t_vector *const this);
@@ -70,7 +76,7 @@ void		vector_remove_index(t_vector *this, size_t find);
 void		vector_mix_remove_index(t_vector *this, size_t index);
 void		vector_remove_element(t_vector *this, void *find);
 void		vector_mix_remove_element(t_vector *this, void *element);
-void		vector_for_each(t_vector *this, void *(*function)(void*, size_t));
+void		vector_for_each(t_vector *this, void (*function)(void*, size_t));
 void		*vector_emplace(t_vector *this);
 void		vector_push_batch(t_vector *this, void *batch, size_t count);
 
