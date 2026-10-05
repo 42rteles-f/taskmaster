@@ -9,12 +9,12 @@
  }	t_config;
  
  typedef struct {
-	char	*name;
-	size_t	id;
- 	void	*(*execute)();
- 	void	*(*sync)();
+	t_indexmap	*programs;
 
- }	t_program;
+ 	void	*(*init)();
+ 	void	*(*setup)();
+ 	void	*(*update)();
+ }	t_supervisor;
  
  bool	supervisor_init(void);
  bool	supervisor_update(void);

@@ -9,7 +9,7 @@ int	program_name_compare(void *element, void *name)
 void	program_destroy(t_program *this)
 {
 	free(this->name);
-
+	//kill process if alive
 }
 
 void	call_program_execute(void *element, int)
