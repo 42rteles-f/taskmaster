@@ -3,6 +3,8 @@
 
 # include <stdint.h>
 
+# define SOCKET_PATH	"/tmp/taskmaster.sock"
+
 typedef enum e_command
 {
     CMD_STATUS,

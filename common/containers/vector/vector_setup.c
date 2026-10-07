@@ -21,6 +21,9 @@ void	vector_destroy(t_vector *this)
 		index++;
 	}
 	free(this->data);
+	this->data = NULL;
+	this->size = 0;
+	this->capacity = 0;
 }
 
 void	delete_vector(t_vector *this)
