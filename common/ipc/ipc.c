@@ -143,3 +143,43 @@ int	ipc_connect(void)
 
 	return (fd);
 }
+
+int	ipc_create_server(int *const server_fd, struct sockaddr_un *const addr)
+{
+	*addr = (struct sockaddr_un) { .sun_family = AF_UNIX };
+	snprintf(addr->sun_path, sizeof(addr->sun_path), "%s", SOCKET_PATH);
+    unlink(addr->sun_path);
+	*server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+	if (*server_fd < 0
+		|| bind(*server_fd, (struct sockaddr *)addr, sizeof(*addr)) < 0
+		|| listen(*server_fd, SOMAXCONN) < 0
+	) {
+		return (-1);
+	}
+	return (0);
+}
+
+t_ipc_message	ipc_message_init(void *const payload)
+{
+	return ((t_ipc_message) {
+		.header = { 
+			.type = IPC_EMPTY,
+			.payload_len = 0
+		},
+		.payload = payload
+	});
+}
+
+void ipc_message_destroy(t_ipc_message *const message)
+{
+	if (message->payload) free(message->payload);
+
+	*message = (t_ipc_message) {
+		.header = { 
+			.type = IPC_EMPTY,
+			.payload_len = 0
+		},
+		.payload = NULL
+	};
+}

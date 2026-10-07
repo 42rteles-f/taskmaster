@@ -14,7 +14,7 @@ typedef struct {
 	void	*(*init)();
 	void	*(*sync)();
 	void	*(*shutdown)();
-	void	(*handleRequest)();
+	void	(*handle_request)();
 	void	(*destroy)();
 }	t_supervisor;
  

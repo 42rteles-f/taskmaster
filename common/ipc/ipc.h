@@ -9,6 +9,7 @@
 
 typedef enum e_ipc_type
 {
+	IPC_EMPTY,
     IPC_STATUS,
     IPC_START,
     IPC_STOP,
@@ -23,6 +24,12 @@ typedef struct s_ipc_header
     uint32_t type;
     uint32_t payload_len;
 } t_ipc_header;
+
+typedef struct s_ipc_message
+{
+    t_ipc_header header;
+    void        *payload;
+} t_ipc_message;
 
 int ipc_send(int fd, const t_ipc_header *res, const void *payload);
 int ipc_recv(int fd, t_ipc_header *res, void **payload);

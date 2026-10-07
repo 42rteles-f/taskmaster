@@ -1,4 +1,7 @@
+#include <supervisor.h>
 #include <server.h>
+#include <client.h>
+
 #include <sys/socket.h>
 #include <stddef.h>
 #include <errno.h>
@@ -9,7 +12,7 @@ void	server_incoming_connections(void)
 	t_server *const	this = server();
 	int				new_fd;
 
-	if (!((t_pollfd*)this->clients->data)[0].revents & POLLIN)
+	if (!(((t_client*)this->clients->data)[0].pollfd.revents & POLLIN))
 		return ;
 
 	new_fd = ipc_accept(this->socket);
@@ -18,26 +21,24 @@ void	server_incoming_connections(void)
 		ERROR_SEND;
 		return ;
 	}
-	*(t_pollfd*)this->clients->emplace(this->clients) = (t_pollfd) {
-		.fd = new_fd,
-		.events = POLLIN,
-		.revents = 0
-	};
+	*(t_client*)this->clients->emplace(this->clients) = client_init(new_fd);
 }
 
 void	server_poll_update(void *const client_arg, size_t index)
 {
-	t_pollfd *const	client = (t_pollfd*)client_arg;
-	void	*payload;
+	t_client *const	client = client_arg;
+	t_ipc_message	response;
 
 	if (index < 1)
 		server_incoming_connections();
-	else
-		payload = client_update(client);
-	
-	if (payload)
-		//pass it to supervisor
-		return ;
+	else if (client_update(client))
+	{
+		response = supervisor()->handle_request(&client->message);
+		client_send(client, &response);
+		ipc_message_destroy(&response);
+	}
+
+	return ;
 }
 
 bool server_start(void)
@@ -60,4 +61,6 @@ bool server_start(void)
 		this->clients->for_each(this->clients, server_poll_update);
 		clean_clients(this->clients);
 	}
+
+	return (true);
 }

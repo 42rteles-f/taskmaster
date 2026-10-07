@@ -8,7 +8,7 @@
 		[CMD_RELOAD] = supervisor_handle_reload,
 		[CMD_SHUTDOWN] = supervisor_handle_shutdown
 
-void	supervisor_handle_command(const t_request *req, void **payload)
+void	supervisor_handle_request(const t_ipc_header *header, void **payload)
 {
 	if (req->command >= CMD_COUNT)
 	{

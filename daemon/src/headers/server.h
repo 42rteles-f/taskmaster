@@ -16,7 +16,6 @@ typedef struct 	pollfd		t_pollfd;
 typedef struct s_server
 {
 	int			socket;
-	t_unsock	server_addr;
 	bool		initialized;
 	bool		online;
 	t_uvector	*clients;

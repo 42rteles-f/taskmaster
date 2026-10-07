@@ -1,28 +1,50 @@
+#include <client.h>
+
 #include <server.h>
 #include <poll.h>
 
 void	client_destroy(void *const client)
 {
-	t_pollfd *const	pollfd = (t_pollfd*)client;
+	t_client *const	this = client;
 
-	if (pollfd->fd > -1)
-		close(pollfd->fd);
+	if (-1 < this->pollfd.fd) close(this->pollfd.fd);
+	if (this->message.payload) free(this->message.payload);
+	*this = (t_client){0};
 }
 
-void	client_update(t_pollfd *const pollfd)
+void	client_clear_data(t_client *const this)
 {
-	t_response	res;
-	void		*payload;
+	if (this->message.payload) free(this->message.payload);
+	this->message.payload = NULL;
+	this->message.header = (t_ipc_header){ .type = IPC_EMPTY, .payload_len = 0 };
+}
 
-	if (!(pollfd->revents & POLLIN))
-		return ;
-	if (pollfd->revents & (POLLHUP | POLLERR) ||
-		!ipc_recv(pollfd->fd, &res, &payload))
+bool	client_update(t_client *const this)
+{
+	if (!(this->pollfd.revents & POLLIN))
+		return (false);
+	if (this->pollfd.revents & (POLLHUP | POLLERR) ||
+		!ipc_recv(this->pollfd.fd, &this->message.header, &this->message.payload))
 	{
-		close(pollfd->fd);
-		pollfd->fd = -1;
-		return ;
+		close(this->pollfd.fd);
+		this->pollfd.fd = -1;
+		return (false);
 	}
+	return (true);
+}
+
+int	client_send(t_client *const this, t_ipc_message *const response)
+{
+	if (response->type == IPC_EMPTY)
+		return (0);
+	if (!ipc_send(this->pollfd.fd, &response->header, response->payload))
+	{
+		close(this->pollfd.fd);
+		this->pollfd.fd = -1;
+		return (-1);
+	}
+
+	return (0);
 }
 
 //unorderd vector means last member is copied into removed index
@@ -39,4 +61,12 @@ void	client_clean_array(t_uvector *const clients)
 		else
 			index++;
 	}
+}
+
+void	client_init(int fd)
+{
+	return ((t_client) {
+		.pollfd = { .fd = fd, .events = POLLIN, .revents = 0 },
+		.message = ipc_message_init();
+	});
 }
