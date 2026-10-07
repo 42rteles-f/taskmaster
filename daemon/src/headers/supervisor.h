@@ -3,13 +3,19 @@
 
 # include <stdbool.h>
 # include <indexmap.h>
+# include <ipc.h>
+
+typedef void	(*t_supervisor_handler)(int, void*);
 
 typedef struct {
-	t_indexmap	*programs;
+	t_vector				*programs;
+	t_supervisor_handler	*commands[CMD_COUNT];
 
 	void	*(*init)();
-	void	*(*setup)();
-	void	*(*update)();
+	void	*(*sync)();
+	void	*(*shutdown)();
+	void	(*handleRequest)();
+	void	(*destroy)();
 }	t_supervisor;
  
 typedef struct {

@@ -10,7 +10,8 @@ typedef enum e_command
     CMD_STOP,
     CMD_RESTART,
     CMD_RELOAD,
-    CMD_SHUTDOWN
+    CMD_SHUTDOWN,
+	CMD_COUNT
 } t_command;
 
 typedef struct s_request

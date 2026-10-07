@@ -81,6 +81,8 @@ void		*vector_emplace(t_vector *this);
 void		vector_push_batch(t_vector *this, void *batch, size_t count);
 
 void		vector_strigfy(t_vector *this);
-
+void		*vector_custom_strcpy(void *dest, const void *src, size_t);
+int			vector_custom_strcmp(const void *dest, const void *src, size_t);
+void		vector_custom_strdestroy(void *element);
 
 #endif
