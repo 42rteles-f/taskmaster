@@ -3,8 +3,11 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <stddef.h>
+#include <sys/un.h>
+#include <sys/time.h>
+#include <unistd.h>
 
-int ipc_transfer_all(int fd, const void *buf, size_t len)
+static int send_all(int fd, const void *buf, size_t len)
 {
     const char  *ptr;
     ssize_t     sent;
@@ -28,7 +31,7 @@ int ipc_transfer_all(int fd, const void *buf, size_t len)
     return (0);
 }
 
-int recv_all(int fd, void *buf, size_t len)
+static int recv_all(int fd, void *buf, size_t len)
 {
     char    *ptr;
     ssize_t received;
@@ -52,35 +55,37 @@ int recv_all(int fd, void *buf, size_t len)
     return (0);
 }
 
-int ipc_send(int fd, const t_response *res, const void *payload)
+int ipc_send(int fd, const t_ipc_header *header, const void *payload)
 {
-    if (send_all(fd, res, sizeof(*res)) < 0)
+	if (IPC_MAX_PAYLOAD < header->payload_len)
+		return (-1);
+    if (send_all(fd, header, sizeof(*header)) < 0)
         return (-1);
 
-    if (res->payload_len > 0)
+    if (header->payload_len > 0)
     {
-        if (!payload)
-            return (-1);
-
-        if (send_all(fd, payload, res->payload_len) < 0)
+        if (!payload || send_all(fd, payload, header->payload_len) < 0)
             return (-1);
     }
 
     return (0);
 }
 
-int ipc_recv(int fd, t_response *res, void **payload)
+int ipc_recv(int fd, t_ipc_header *header, void **payload)
 {
-    if (recv_all(fd, res, sizeof(*res)) < 0)
+	*payload = NULL;
+    if (recv_all(fd, header, sizeof(*header)) < 0)
         return (-1);
-    if (res->payload_len == 0)
+	if (IPC_MAX_PAYLOAD < header->payload_len)
+		return (-1);
+    if (header->payload_len == 0)
         return (0);
 
-    *payload = malloc(res->payload_len);
+    *payload = malloc(header->payload_len);
     if (!*payload)
         return (-1);
 
-    if (recv_all(fd, *payload, res->payload_len) < 0)
+    if (recv_all(fd, *payload, header->payload_len) < 0)
     {
         free(*payload);
         *payload = NULL;
@@ -88,4 +93,53 @@ int ipc_recv(int fd, t_response *res, void **payload)
     }
 
     return (0);
+}
+
+int ipc_accept(const int server_fd)
+{
+	const struct timeval	timeout = { .tv_sec = IPC_TIMEOUT_SEC, .tv_usec = 0 };
+	const int 				client_fd = accept(server_fd, NULL, NULL);
+
+	if (client_fd < 0)
+		return (-1);
+
+	if (
+		setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO,
+			&timeout, sizeof(timeout)) < 0
+		|| setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO,
+			&timeout, sizeof(timeout)) < 0
+	) {
+		close(client_fd);
+		return (-1);
+	}
+	
+	return (client_fd);
+}
+
+int	ipc_connect(void)
+{
+	const int					fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	const struct sockaddr_un	addr = {
+		.sun_family = AF_UNIX,
+		.sun_path = SOCKET_PATH
+	};
+	const struct timeval		timeout = {
+		.tv_sec = IPC_TIMEOUT_SEC,
+		.tv_usec = 0
+	};
+
+	if (fd < 0)
+		return (-1);
+
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+			&timeout, sizeof(timeout)) < 0
+		|| setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+			&timeout, sizeof(timeout)) < 0
+		|| connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0
+	) {
+		close(fd);
+		return (-1);
+	}
+
+	return (fd);
 }

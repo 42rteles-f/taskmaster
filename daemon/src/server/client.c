@@ -25,6 +25,8 @@ void	client_update(t_pollfd *const pollfd)
 	}
 }
 
+//unorderd vector means last member is copied into removed index
+//upon removal, we need to check the same index again.
 void	client_clean_array(t_uvector *const clients)
 {
 	size_t	index;

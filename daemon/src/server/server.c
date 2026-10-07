@@ -9,10 +9,10 @@ void	server_incoming_connections(void)
 	t_server *const	this = server();
 	int				new_fd;
 
-	if (!(this->socket & POLLIN))
+	if (!((t_pollfd*)this->clients->data)[0].revents & POLLIN)
 		return ;
 
-	new_fd = accept(this->socket, NULL, NULL);
+	new_fd = ipc_accept(this->socket);
 	if (new_fd < 0)
 	{
 		ERROR_SEND;
@@ -25,33 +25,19 @@ void	server_incoming_connections(void)
 	};
 }
 
-void	server_poll_update(void *const client, size_t index)
+void	server_poll_update(void *const client_arg, size_t index)
 {
-	t_pollfd *const	pollfd = (t_pollfd*)client;
+	t_pollfd *const	client = (t_pollfd*)client_arg;
+	void	*payload;
 
 	if (index < 1)
 		server_incoming_connections();
-	else if (pollfd->revents & (POLLHUP | POLLERR))
-	{
-		close(pollfd->fd);
-		pollfd->fd = -1;
+	else
+		payload = client_update(client);
+	
+	if (payload)
+		//pass it to supervisor
 		return ;
-	}
-	ipc_recv(pollfd->fd, NULL, 0, MSG_PEEK | MSG_DONTWAIT);
-}
-
-void	clean_clients(t_uvector *const clients)
-{
-	size_t	index;
-
-	index = 0;
-	while (index < clients->size)
-	{
-		if (((t_pollfd*)clients->at(clients, index))->fd < 0)
-			clients->remove_at(clients, index);
-		else
-			index++;
-	}
 }
 
 bool server_start(void)
