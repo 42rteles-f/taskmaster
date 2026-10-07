@@ -35,6 +35,7 @@ void	server_poll_update(void *const client_arg, size_t index)
 	{
 		response = supervisor()->handle_request(&client->message);
 		client_send(client, &response);
+		ipc_message_destroy(&client->message);
 		ipc_message_destroy(&response);
 	}
 

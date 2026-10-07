@@ -5,17 +5,18 @@
 # include <indexmap.h>
 # include <ipc.h>
 
-typedef void	(*t_supervisor_handler)(int, void*);
+typedef t_ipc_message	(*t_supervisor_handler)(int, void*);
 
 typedef struct {
 	t_vector				*programs;
-	t_supervisor_handler	*commands[CMD_COUNT];
+	t_supervisor_handler	commands[IPC_COUNT];
 
 	void	*(*init)();
 	void	*(*sync)();
 	void	*(*shutdown)();
-	void	(*handle_request)();
 	void	(*destroy)();
+
+	t_ipc_message	(*handle_request)(t_ipc_message *const);
 }	t_supervisor;
  
 typedef struct {

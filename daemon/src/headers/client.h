@@ -3,7 +3,7 @@
 
 # include <poll.h>
 # include <ipc.h>
-# include <bool.h>
+# include <stdbool.h>
 
 typedef struct pollfd t_pollfd;
 

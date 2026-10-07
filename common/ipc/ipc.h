@@ -36,4 +36,7 @@ int ipc_recv(int fd, t_ipc_header *res, void **payload);
 int ipc_accept(const int server_fd);
 int	ipc_connect(void);
 
+t_ipc_message	ipc_message_init(void);
+void			ipc_message_destroy(t_ipc_message *const message);
+
 #endif

@@ -1,6 +1,7 @@
 #include <supervisor.h>
 #include <program.h>
-#include 
+#include <ipc.h>
+#include "commands.c"
 
 int	program_name_compare(void *element, void *name)
 {
@@ -32,15 +33,14 @@ bool	supervisor_init(void)
 
 	this->programs = new_uvector(sizeof(t_program));
 	vector_custom(this->programs, NULL, program_name_compare, program_destroy);
-	this->commands = new_indexmap(sizeof(char*), sizeof(t_supervisor_handler));
-	this->commands = {
-		[CMD_STATUS] = supervisor_handle_status,
-		[CMD_START] = supervisor_handle_start,
-		[CMD_STOP] = supervisor_handle_stop,
-		[CMD_RESTART] = supervisor_handle_restart,
-		[CMD_RELOAD] = supervisor_handle_reload,
-		[CMD_SHUTDOWN] = supervisor_handle_shutdown
-	}
+
+	this->commands[IPC_STATUS] = supervisor_handle_status;
+	this->commands[IPC_START] = supervisor_handle_start;
+	this->commands[IPC_STOP] = supervisor_handle_stop;
+	this->commands[IPC_RESTART] = supervisor_handle_restart;
+	this->commands[IPC_RELOAD] = supervisor_handle_reload;
+	this->commands[IPC_SHUTDOWN] = supervisor_handle_shutdown;
+
 	//start sighandlers
 	//start current programs loaded
 }
