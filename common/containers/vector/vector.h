@@ -15,11 +15,12 @@
 	printf("DEBUG %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__)
 
 typedef struct s_vector	t_vector;
-typedef t_vector		t_uvector;
+typedef t_vector		t_uovector;
 typedef t_vector		t_pvector;
-typedef int			(*t_vector_compare)(const void *, const void *, size_t);
+typedef int				(*t_vector_compare)(const void *, const void *, size_t);
 typedef void			*(*t_vector_copy)(void *, const void *, size_t);
 typedef void			(*t_vector_destroy_element)(void *);
+typedef	void			(*t_vector_iter(void *const, size_t));
 
 struct s_hashpair {
 	size_t	key;
@@ -53,7 +54,7 @@ struct s_vector {
 //vector_setup.c
 t_vector	init_vector(size_t size);
 t_vector	*new_vector(size_t size);
-t_uvector	*new_uvector(size_t size);
+t_uovector	*new_uovector(size_t size);
 void		vector_expand(t_vector *this);
 void		vector_destroy(t_vector *this);
 void		delete_vector(t_vector *this);

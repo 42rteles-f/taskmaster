@@ -1,6 +1,7 @@
 #include <server.h>
 #include <ipc.h>
 #include <client.h>
+#include "pollfd.c"
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -10,18 +11,10 @@ bool	server_destroy(void)
 {
 	t_server *const	this = server();
 
-	if (this->clients) delete_vector(this->clients);
+	if (this->pollables) delete_vector(this->pollables);
 	if (-1 < this->socket) close(this->socket);
 	*this = (t_server){0};
 	return (true);
-}
-
-void	client_destroy(void *const client)
-{
-	t_pollfd *const	pollfd = (t_pollfd*)client;
-
-	if (pollfd->fd > -1)
-		close(pollfd->fd);
 }
 
 bool	server_init(void)
@@ -30,8 +23,9 @@ bool	server_init(void)
 
 	if (this->initialized) return (true);
 
-	this->clients = new_uvector(sizeof(t_client));
-	vector_custom(this->clients, NULL, NULL, client_destroy);
+	this->pollables = new_indexmap(sizeof(t_pollfd*), sizeof(t_pollable));
+	this->pollables->custom_keys(this->pollables, NULL, pollfd_compare, NULL);
+	this->pollables->custom_values(this->pollables, NULL, NULL, pollable_destroy);
 
 	this->initialized = true;
 	return (true);
@@ -40,6 +34,7 @@ bool	server_init(void)
 bool	server_open_connections(t_server *const this)
 {
 	t_unsock	addr;
+	t_pollable	server;
 
 	if (this->online)	return (true);
 
@@ -54,19 +49,22 @@ bool	server_open_connections(t_server *const this)
         return (false);
 	}
 
-	*(t_pollfd*)this->clients->emplace(this->clients) = (t_pollfd) {
-		.fd = this->socket,
-		.events = POLLIN
-	};
+	server = pollable_init(this->socket);
+	server.handler = server_handle_connections;
+	this->pollables->set(this->pollables, server.pollfd, &server);
 	this->online = true;
 
     return (true);
 
 error:
-	if (this->socket >= 0)
-		close(this->socket);
+	if (this->socket >= 0) close(this->socket);
 	this->socket = -1;
 	unlink(SOCKET_PATH);
 	return (false);
 
 }
+
+	// *(t_pollfd*)this->pollables->emplace(this->pollables) = (t_pollfd) {
+	// 	.fd = this->socket,
+	// 	.events = POLLIN
+	// };

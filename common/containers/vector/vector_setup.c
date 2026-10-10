@@ -84,7 +84,7 @@ t_vector	*new_vector(size_t size)
 	return (new);
 }
 
-t_vector	init_uvector(size_t size)
+t_vector	init_uovector(size_t size)
 {
 	t_vector	init;
 
@@ -94,12 +94,12 @@ t_vector	init_uvector(size_t size)
 	return (init);
 }
 
-t_uvector	*new_uvector(size_t size)
+t_uovector	*new_uovector(size_t size)
 {
-	t_uvector	*new;
+	t_uovector	*new;
 
-	new = malloc(sizeof(t_uvector));
-	*new = init_uvector(size);
+	new = malloc(sizeof(t_uovector));
+	*new = init_uovector(size);
 	return (new);
 }
 

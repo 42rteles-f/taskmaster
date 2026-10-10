@@ -1,16 +1,16 @@
 #include <supervisor.h>
 #include <server.h>
 
-t_ipc_message	supervisor_handle_request(const t_ipc_message *const req)
+t_ipc_message	supervisor_handle_request(const t_ipc_message *const request)
 {
-	t_ipc_message	response;
+	t_ipc_message			response;
 	t_supervisor_handler	handler;
 
-	if (IPC_EMPTY == req->header.type || IPC_COUNT <= req->header.type) {
+	if (IPC_EMPTY == request->header.type || IPC_COUNT <= request->header.type) {
 		return (ipc_message_init());
 	}
-	handler = supervisor()->commands[req->header.type];
-	return (handler(req->header.payload_len, req->payload));
+	handler = supervisor()->commands[request->header.type];
+	return (handler(request->header.payload_len, request->payload));
 }
 
 

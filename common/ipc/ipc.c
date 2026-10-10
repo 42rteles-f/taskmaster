@@ -146,24 +146,12 @@ int	ipc_connect(void)
 
 t_ipc_message	ipc_message_init(void)
 {
-	return ((t_ipc_message) {
-		.header = { 
-			.type = IPC_EMPTY,
-			.payload_len = 0
-		},
-		.payload = NULL
-	});
+	return ((t_ipc_message) { .header = { .type = IPC_EMPTY }});
 }
 
-void ipc_message_destroy(t_ipc_message *const message)
+void ipc_message_reset(t_ipc_message *const message)
 {
 	if (message->payload) free(message->payload);
 
-	*message = (t_ipc_message) {
-		.header = { 
-			.type = IPC_EMPTY,
-			.payload_len = 0
-		},
-		.payload = NULL
-	};
+	*message = ipc_message_init();
 }

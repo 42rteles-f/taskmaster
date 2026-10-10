@@ -1,46 +1,46 @@
 #include <client.h>
-
 #include <server.h>
+#include "pollfd.c"
+
 #include <poll.h>
 
-void	client_destroy(void *const client)
+void	pollable_destroy(void *const client)
 {
-	t_client *const	this = client;
+	t_pollable *const	this = client;
 
-	if (-1 < this->pollfd.fd) close(this->pollfd.fd);
-	if (this->message.payload) free(this->message.payload);
-	*this = (t_client){0};
+	delete_pollfd(this->pollfd);
+	this->pollfd = NULL;
+	ipc_message_reset(&this->message);
+	this->handler = pollable_do_nothing;
 }
 
-void	client_clear_data(t_client *const this)
+void	pollable_clear_data(t_pollable *const this)
 {
-	if (this->message.payload) free(this->message.payload);
-	this->message.payload = NULL;
-	this->message.header = (t_ipc_header){ .type = IPC_EMPTY, .payload_len = 0 };
+	ipc_message_reset(&this->message);
 }
 
-bool	client_update(t_client *const this)
+bool	pollable_read_message(t_pollable *const this)
 {
-	if (!(this->pollfd.revents & POLLIN))
+	if (!(this->pollfd->revents & POLLIN))
 		return (false);
-	if (this->pollfd.revents & (POLLHUP | POLLERR) ||
-		0 != ipc_recv(this->pollfd.fd, &this->message.header, &this->message.payload))
+	if (this->pollfd->revents & (POLLHUP | POLLERR) ||
+		0 != ipc_recv(this->pollfd->fd, &this->message.header, &this->message.payload))
 	{
-		close(this->pollfd.fd);
-		this->pollfd.fd = -1;
+		close(this->pollfd->fd);
+		this->pollfd->fd = -1;
 		return (false);
 	}
 	return (true);
 }
 
-int	client_send(t_client *const this, t_ipc_message *const response)
+int	pollable_send_message(t_pollable *const this, t_ipc_message *const response)
 {
 	if (response->header.type == IPC_EMPTY)
 		return (0);
-	if (0 != ipc_send(this->pollfd.fd, &response->header, response->payload))
+	if (0 != ipc_send(this->pollfd->fd, &response->header, response->payload))
 	{
-		close(this->pollfd.fd);
-		this->pollfd.fd = -1;
+		close(this->pollfd->fd);
+		this->pollfd->fd = -1;
 		return (-1);
 	}
 
@@ -49,7 +49,7 @@ int	client_send(t_client *const this, t_ipc_message *const response)
 
 //unorderd vector means last member is copied into removed index
 //upon removal, we need to check the same index again.
-void	client_clean_array(t_uvector *const clients)
+void	pollable_clean_array(t_uovector *const clients)
 {
 	size_t	index;
 
@@ -63,10 +63,13 @@ void	client_clean_array(t_uvector *const clients)
 	}
 }
 
-void	client_init(int fd)
+void	pollable_do_nothing(struct event_source *const source) { return ; };
+
+void	pollable_init(int fd)
 {
-	return ((t_client) {
-		.pollfd = { .fd = fd, .events = POLLIN, .revents = 0 },
-		.message = ipc_message_init()
+	return ((t_pollable) {
+		.pollfd = new_pollfd(fd),
+		.message = ipc_message_init(),
+		.handler = pollable_do_nothing,
 	});
 }

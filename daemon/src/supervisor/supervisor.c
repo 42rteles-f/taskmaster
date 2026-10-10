@@ -31,7 +31,7 @@ bool	supervisor_init(void)
 	if (this->programs)
 		delete_vector(this->programs);
 
-	this->programs = new_uvector(sizeof(t_program));
+	this->programs = new_uovector(sizeof(t_program));
 	vector_custom(this->programs, NULL, program_name_compare, program_destroy);
 
 	this->commands[IPC_STATUS] = supervisor_handle_status;
@@ -45,18 +45,20 @@ bool	supervisor_init(void)
 	//start current programs loaded
 }
 
-bool	supervisor_update(t_config *config)
+bool	supervisor_update(void)
 {
 	t_supervisor	*this = supervisor();
-	t_uvector		*new_data;
+	t_uovector		*new_data;
 	t_program		*new_prog;
 	t_program		*old_prog;
 
 	//pass config data into supervisor structure
-	if (!config)
-		printf("Invalid config file. No changes. Not a proper logger");
+	if (!parse_config_file(SUPERVISOR_CONFIG_FILE)) {
+		ERROR_SEND;
+		return (false);
+	}
 
-	new_data = new_uvector(sizeof(t_program));
+	new_data = new_uovector(sizeof(t_program));
 	vector_custom(this->programs, NULL, program_name_compare, NULL);
 	fill_vector(new_data);
 
@@ -77,7 +79,7 @@ bool	supervisor_update(t_config *config)
 	supervisor_execute(this);
 }
 
-supervisor_update_programs(t_uvector)
+supervisor_update_programs(t_uovector)
 
 bool	supervisor_set_signals(void)
 {
@@ -85,7 +87,7 @@ bool	supervisor_set_signals(void)
 	
 }
 
-bool	supervisor_execute(t_supervisor *this, t_uvector programs)
+bool	supervisor_execute(t_supervisor *this, t_uovector programs)
 {
 	
 }

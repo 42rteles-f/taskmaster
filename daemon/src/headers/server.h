@@ -18,7 +18,7 @@ typedef struct s_server
 	int			socket;
 	bool		initialized;
 	bool		online;
-	t_uvector	*clients;
+	t_indexmap	*pollables;
 
 	void	*(*online)();
 	void	*(*init)();
@@ -27,5 +27,4 @@ typedef struct s_server
 }	t_server;
 
 t_server	*server(void);
-
 #endif

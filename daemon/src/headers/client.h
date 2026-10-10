@@ -1,5 +1,5 @@
-#ifndef CLIENT_H
-# define CLIENT_H
+#ifndef POLLABLE_H
+# define POLLABLE_H
 
 # include <poll.h>
 # include <ipc.h>
@@ -7,16 +7,19 @@
 
 typedef struct pollfd t_pollfd;
 
-typedef struct s_client
+typedef struct
 {
-	t_pollfd		pollfd;
+	t_pollfd		*pollfd;
 	t_ipc_message	message;
-}	t_client;
+	void			*context;
 
-void		client_clean_array(t_uvector *const clients);
-bool		client_update(t_client *const this);
-void		client_destroy(void *const client);
-void		client_clear_data(t_client *const this);
-t_client	client_init(int fd);
+	void			(*handler)(void*);
+}	t_pollable;
+
+void		pollable_clean_array(t_uovector *const clients);
+bool		pollable_read_message(t_pollable *const this);
+void		pollable_destroy(void *const client);
+void		pollable_clear_data(t_pollable *const this);
+t_pollable	pollable_init(int fd);
 
 #endif

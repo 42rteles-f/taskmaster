@@ -7,12 +7,25 @@
 #include <errno.h>
 #include <poll.h>
 
-void	server_incoming_connections(void)
+void	call_pollable_handler(void *arg, size_t index)
 {
-	t_server *const	this = server();
+	(void)index;
+	((t_pollable*)arg)->handler(arg);
+}
+
+static inline bool	server_has_connection_request(t_server *this)
+{
+	return (((t_pollable*)this->pollables->keys.data)->pollfd->revents & POLLIN);
+}
+
+void	server_handle_connections(void *const arg)
+{
+	t_server *const	this = ((t_pollable*)arg)->context;
+	t_pollable		new_client;
 	int				new_fd;
 
-	if (!(((t_client*)this->clients->data)[0].pollfd.revents & POLLIN))
+
+	if (!server_has_connection_request(this))
 		return ;
 
 	new_fd = ipc_accept(this->socket);
@@ -21,25 +34,22 @@ void	server_incoming_connections(void)
 		ERROR_SEND;
 		return ;
 	}
-	*(t_client*)this->clients->emplace(this->clients) = client_init(new_fd);
+	new_client = pollable_init(new_fd);
+	new_client.handler = server_handle_pollable;
+	this->pollables->set(this->pollables, new_client.pollfd, &new_client);
 }
 
-void	server_poll_update(void *const client_arg, size_t index)
+void	server_handle_pollable(void *const arg)
 {
-	t_client *const	client = client_arg;
-	t_ipc_message	response;
+	t_pollable *const	pollable = arg;
+	t_ipc_message		response;
 
-	if (index < 1)
-		server_incoming_connections();
-	else if (client_update(client))
-	{
-		response = supervisor()->handle_request(&client->message);
-		client_send(client, &response);
-		ipc_message_destroy(&client->message);
-		ipc_message_destroy(&response);
-	}
+	if (!pollable_read_message(pollable)) return ;
 
-	return ;
+	response = supervisor()->handle_request(&pollable->message);
+	pollable_send_message(pollable, &response);
+	ipc_message_reset(&pollable->message);
+	ipc_message_reset(&response);
 }
 
 bool server_start(void)
@@ -51,7 +61,7 @@ bool server_start(void)
 
 	while (this->online)
 	{
-		if (poll(this->clients->data, this->clients->size, -1) < 0)
+		if (poll(this->pollables->keys.data, this->pollables->keys.size, -1) < 0)
 		{
 			if (errno == EINTR) continue;
 
@@ -59,8 +69,8 @@ bool server_start(void)
 			return (false);
 		}
 
-		this->clients->for_each(this->clients, server_poll_update);
-		clean_clients(this->clients);
+		this->pollables->values.for_each(this->pollables, call_pollable_handler);
+		clean_clients(this->pollables);
 	}
 
 	return (true);
