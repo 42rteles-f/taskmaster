@@ -1,12 +1,12 @@
-#include <client.h>
+#include <pollable.h>
 #include <server.h>
 #include "pollfd.c"
 
 #include <poll.h>
 
-void	pollable_destroy(void *const client)
+void	pollable_destroy(void *const arg)
 {
-	t_pollable *const	this = client;
+	t_pollable *const	this = arg;
 
 	delete_pollfd(this->pollfd);
 	this->pollfd = NULL;
@@ -19,7 +19,7 @@ void	pollable_clear_data(t_pollable *const this)
 	ipc_message_reset(&this->message);
 }
 
-bool	pollable_read_message(t_pollable *const this)
+bool	pollable_read(t_pollable *const this)
 {
 	if (!(this->pollfd->revents & POLLIN))
 		return (false);
@@ -33,7 +33,7 @@ bool	pollable_read_message(t_pollable *const this)
 	return (true);
 }
 
-int	pollable_send_message(t_pollable *const this, t_ipc_message *const response)
+int	pollable_send(t_pollable *const this, t_ipc_message *const response)
 {
 	if (response->header.type == IPC_EMPTY)
 		return (0);
@@ -45,22 +45,6 @@ int	pollable_send_message(t_pollable *const this, t_ipc_message *const response)
 	}
 
 	return (0);
-}
-
-//unorderd vector means last member is copied into removed index
-//upon removal, we need to check the same index again.
-void	pollable_clean_array(t_uovector *const clients)
-{
-	size_t	index;
-
-	index = 0;
-	while (index < clients->size)
-	{
-		if (((t_pollfd*)clients->at(clients, index))->fd < 0)
-			clients->remove_at(clients, index);
-		else
-			index++;
-	}
 }
 
 void	pollable_do_nothing(struct event_source *const source) { return ; };

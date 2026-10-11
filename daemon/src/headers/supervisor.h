@@ -23,14 +23,6 @@ typedef struct {
 
 	t_ipc_message	(*handle_request)(t_ipc_message *const);
 }	t_supervisor;
-
-typedef struct {
-
-}	t_config;
- 
-typedef struct {
-
-}	t_program;
  
 bool	supervisor_init(void);
 bool	supervisor_update(void);

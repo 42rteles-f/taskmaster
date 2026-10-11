@@ -15,7 +15,7 @@ typedef struct 	pollfd		t_pollfd;
 
 typedef struct s_server
 {
-	int			socket;
+	t_pollfd	*socket;
 	bool		initialized;
 	bool		online;
 	t_indexmap	*pollables;

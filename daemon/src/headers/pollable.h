@@ -16,9 +16,8 @@ typedef struct
 	void			(*handler)(void*);
 }	t_pollable;
 
-void		pollable_clean_array(t_uovector *const clients);
-bool		pollable_read_message(t_pollable *const this);
-void		pollable_destroy(void *const client);
+bool		pollable_read(t_pollable *const this);
+void		pollable_destroy(void *const pollable);
 void		pollable_clear_data(t_pollable *const this);
 t_pollable	pollable_init(int fd);
 

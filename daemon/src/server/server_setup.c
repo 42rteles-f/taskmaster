@@ -1,6 +1,6 @@
 #include <server.h>
 #include <ipc.h>
-#include <client.h>
+#include <pollable.h>
 #include "pollfd.c"
 
 #include <poll.h>
@@ -31,27 +31,37 @@ bool	server_init(void)
 	return (true);
 }
 
+void	server_store_socket(t_server *const this, int socket)
+{
+	t_pollable	poll_obj;
+
+	poll_obj = pollable_init(socket);
+	poll_obj.handler = server_handle_connections;
+	poll_obj.context = this;
+	if (this->socket) delete_pollfd(this->socket);
+	this->socket = poll_obj.pollfd;
+	this->pollables->set(this->pollables, poll_obj.pollfd, &poll_obj);
+}
+
 bool	server_open_connections(t_server *const this)
 {
 	t_unsock	addr;
-	t_pollable	server;
+	int			fd;
 
 	if (this->online)	return (true);
 
 	addr = (t_unsock) { .sun_family = AF_UNIX };
 	snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", SOCKET_PATH);
     unlink(SOCKET_PATH);
-    if ((this->socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0
-		|| bind(this->socket, (struct sockaddr *)&addr, sizeof(addr)) < 0
-		|| listen(this->socket, SOMAXCONN) < 0
+    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0
+		|| bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0
+		|| listen(fd, SOMAXCONN) < 0
 	) {
 		ERROR_SEND;
         return (false);
 	}
 
-	server = pollable_init(this->socket);
-	server.handler = server_handle_connections;
-	this->pollables->set(this->pollables, server.pollfd, &server);
+	server_store_socket(this, fd);
 	this->online = true;
 
     return (true);

@@ -14,13 +14,6 @@ typedef struct s_pair {
 	void	*second;
 } t_pair;
 
-typedef struct s_process {
-	int		a;
-	long	b;
-	char	c;
-	void	*d;
-} t_process;
-
 struct s_indexmap {
 	t_vector	keys;
 	t_vector	values;

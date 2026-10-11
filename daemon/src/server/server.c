@@ -1,11 +1,27 @@
 #include <supervisor.h>
 #include <server.h>
-#include <client.h>
+#include <pollable.h>
 
 #include <sys/socket.h>
 #include <stddef.h>
 #include <errno.h>
 #include <poll.h>
+
+//unorderd vector means last member is copied into removed index
+//upon removal, we need to check the same index again.
+void	server_clean_pollables(t_indexmap *const clients)
+{
+	size_t	index;
+
+	index = 0;
+	while (index < clients->size)
+	{
+		if (((t_pollfd*)clients->at(clients, index))->fd < 0)
+			clients->remove_at(clients, index);
+		else
+			index++;
+	}
+}
 
 void	call_pollable_handler(void *arg, size_t index)
 {
@@ -15,7 +31,17 @@ void	call_pollable_handler(void *arg, size_t index)
 
 static inline bool	server_has_connection_request(t_server *this)
 {
-	return (((t_pollable*)this->pollables->keys.data)->pollfd->revents & POLLIN);
+	t_pollable	*const server = this->pollables->get(
+		this->pollables,
+		(t_pollfd[]){ {.fd = this->socket} }
+	);
+	return (server->pollfd->revents & POLLIN);
+}
+
+void	server_handle_pipe_trigger(void *const arg)
+{
+	t_pollable *const	pollable = arg;
+
 }
 
 void	server_handle_connections(void *const arg)
@@ -44,10 +70,10 @@ void	server_handle_pollable(void *const arg)
 	t_pollable *const	pollable = arg;
 	t_ipc_message		response;
 
-	if (!pollable_read_message(pollable)) return ;
+	if (!pollable_read(pollable)) return ;
 
 	response = supervisor()->handle_request(&pollable->message);
-	pollable_send_message(pollable, &response);
+	pollable_send(pollable, &response);
 	ipc_message_reset(&pollable->message);
 	ipc_message_reset(&response);
 }
@@ -70,7 +96,7 @@ bool server_start(void)
 		}
 
 		this->pollables->values.for_each(this->pollables, call_pollable_handler);
-		clean_clients(this->pollables);
+		server_clean_pollables(this->pollables);
 	}
 
 	return (true);
