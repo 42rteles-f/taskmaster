@@ -16,7 +16,9 @@ CLI_BUILD       := $(BUILD_DIR)/cli
 DAEMON_BUILD    := $(BUILD_DIR)/daemon
 COMMON_BUILD    := $(BUILD_DIR)/common
 
-CLI_SRCS        := cli/src/main.c
+CLI_SRCS        := cli/src/terminal/commands.c \
+	cli/src/terminal/main.c \
+	cli/src/terminal/setup.c
 
 # pollfd.c and commands.c are not listed because the current daemon sources
 # include them directly from server and supervisor translation units.
@@ -55,7 +57,7 @@ common: $(COMMON_SO)
 
 $(CLI): $(CLI_OBJS) $(COMMON_SO)
 	$(CC) $(LDFLAGS) $(CLI_OBJS) -L. -Wl,--no-as-needed \
-		-ltaskmaster_common -Wl,-rpath,'$$ORIGIN' -o $@
+		-ltaskmaster_common -lreadline -Wl,-rpath,'$$ORIGIN' -o $@
 
 $(DAEMON): $(DAEMON_OBJS) $(COMMON_SO)
 	$(CC) $(LDFLAGS) $(DAEMON_OBJS) -L. -Wl,--no-as-needed \

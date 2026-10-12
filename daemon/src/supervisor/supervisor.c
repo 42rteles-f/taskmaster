@@ -47,7 +47,7 @@ bool	supervisor_init(void)
 
 bool	supervisor_update(void)
 {
-	t_supervisor	*this = supervisor();
+	t_supervisor	*const this = supervisor();
 	t_uovector		*new_data;
 	t_program		*new_prog;
 	t_program		*old_prog;
