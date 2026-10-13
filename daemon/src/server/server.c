@@ -11,12 +11,13 @@
 //upon removal, we need to check the same index again.
 void	server_clean_pollables(t_indexmap *const clients)
 {
-	size_t	index;
+	size_t				index;
+	t_uovector	*const	keys = &clients->keys;
 
 	index = 0;
-	while (index < clients->size)
+	while (index < keys->size)
 	{
-		if (((t_pollfd*)clients->at(clients, index))->fd < 0)
+		if (((t_pollfd*)keys->data)[index].fd < 0)
 			clients->remove_at(clients, index);
 		else
 			index++;
@@ -33,7 +34,7 @@ static inline bool	server_has_connection_request(t_server *this)
 {
 	t_pollable	*const server = this->pollables->get(
 		this->pollables,
-		(t_pollfd[]){ {.fd = this->socket} }
+		&(t_pollfd){ .fd = this->socket }
 	);
 	return (server->pollfd->revents & POLLIN);
 }
@@ -42,6 +43,8 @@ void	server_handle_pipe_trigger(void *const arg)
 {
 	t_pollable *const	pollable = arg;
 
+	if (!pollable_read(pollable))
+
 }
 
 void	server_handle_connections(void *const arg)
@@ -49,7 +52,6 @@ void	server_handle_connections(void *const arg)
 	t_server *const	this = ((t_pollable*)arg)->context;
 	t_pollable		new_client;
 	int				new_fd;
-
 
 	if (!server_has_connection_request(this))
 		return ;

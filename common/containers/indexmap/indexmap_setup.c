@@ -15,8 +15,8 @@ void destroy_indexmap(t_indexmap *this)
 t_indexmap	init_indexmap(size_t key_size, size_t value_size)
 {
 	return ((t_indexmap) {
-		.keys = init_vector(key_size),
-		.values = init_vector(value_size),
+		.keys = init_uovector(key_size),
+		.values = init_uovector(value_size),
 		.set_compare = indexmap_set_compare,
 		.custom_keys = indexmap_custom_keys,
 		.custom_values = indexmap_custom_values,

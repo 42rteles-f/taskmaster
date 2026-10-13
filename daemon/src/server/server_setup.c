@@ -26,19 +26,19 @@ bool	server_init(void)
 	this->pollables = new_indexmap(sizeof(t_pollfd*), sizeof(t_pollable));
 	this->pollables->custom_keys(this->pollables, NULL, pollfd_compare, NULL);
 	this->pollables->custom_values(this->pollables, NULL, NULL, pollable_destroy);
-
 	this->initialized = true;
 	return (true);
 }
 
-void	server_store_socket(t_server *const this, int socket)
+void	server_set_socket(t_server *const this, int socket)
 {
 	t_pollable	poll_obj;
 
+	if (this->socket)
+		this->pollables->remove(this->pollables, &(t_pollfd){ .fd = this->socket });
 	poll_obj = pollable_init(socket);
 	poll_obj.handler = server_handle_connections;
 	poll_obj.context = this;
-	if (this->socket) delete_pollfd(this->socket);
 	this->socket = poll_obj.pollfd;
 	this->pollables->set(this->pollables, poll_obj.pollfd, &poll_obj);
 }
@@ -61,7 +61,7 @@ bool	server_open_connections(t_server *const this)
         return (false);
 	}
 
-	server_store_socket(this, fd);
+	server_set_socket(this, fd);
 	this->online = true;
 
     return (true);

@@ -11,13 +11,15 @@ t_pollfd	*new_pollfd(size_t fd)
 	return (new);
 }
 
-int	pollfd_compare(const void *left, const void *right, size_t size)
+int	pollfd_compare(const void *const left, const void *const right, const size_t size)
 {
+	(void)size;
 	return (((t_pollfd*)left)->fd - ((t_pollfd*)right)->fd);
 }
 
-void	delete_pollfd(const t_pollfd *this)
+void	delete_pollfd(t_pollfd *const this)
 {
 	if (-1 < this->fd) close(this->fd);
+	*this = (t_pollfd){};
 	free(this);
 }

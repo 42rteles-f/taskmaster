@@ -1,6 +1,6 @@
-#include <pollable.h>
 #include <server.h>
-#include "pollfd.c"
+#include "pollable.h"
+#include "server_internal.h"
 
 #include <poll.h>
 
@@ -23,6 +23,8 @@ bool	pollable_read(t_pollable *const this)
 {
 	if (!(this->pollfd->revents & POLLIN))
 		return (false);
+
+	ipc_message_reset(&this->message);
 	if (this->pollfd->revents & (POLLHUP | POLLERR) ||
 		0 != ipc_recv(this->pollfd->fd, &this->message.header, &this->message.payload))
 	{

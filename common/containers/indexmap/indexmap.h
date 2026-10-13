@@ -15,8 +15,8 @@ typedef struct s_pair {
 } t_pair;
 
 struct s_indexmap {
-	t_vector	keys;
-	t_vector	values;
+	t_uovector	keys;
+	t_uovector	values;
 
 	void		(*set_compare)(t_indexmap*, t_indexmap_compare);
 	void		(*custom_keys)(t_indexmap*, t_vector_copy, t_vector_compare,
