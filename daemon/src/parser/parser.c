@@ -100,7 +100,7 @@ void	set_value_from_program(yaml_node_t *program, char *key,
 
 	scalar = (char *)value->data.scalar.value;
 	if (strcmp(key, "autostart") == 0 && size == sizeof(bool))
-		*(bool*)dest = (strcmp(scalar, "true") == 0)
+		*(bool*)dest = (strcmp(scalar, "true") == 0);
 	else if (
 		strcmp(key, "autorestart") == 0
 		&& sizeof(t_autorestart) == size

@@ -1,7 +1,8 @@
+// Custom Headers
 #include <server.h>
 #include "pollable.h"
 #include "server_internal.h"
-
+// Standard Headers
 #include <poll.h>
 
 void	pollable_destroy(void *const arg)

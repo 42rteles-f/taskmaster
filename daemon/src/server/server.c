@@ -1,11 +1,19 @@
+// Custom Headers
 #include <supervisor.h>
 #include <server.h>
-#include <pollable.h>
-
+#include "pollable.h"
+// Standard Headers
 #include <sys/socket.h>
 #include <stddef.h>
 #include <errno.h>
 #include <poll.h>
+
+t_server	*server(void)
+{
+	static t_server	this;
+
+	return (&this);
+}
 
 //unorderd vector means last member is copied into removed index
 //upon removal, we need to check the same index again.
@@ -43,7 +51,7 @@ void	server_handle_pipe_trigger(void *const arg)
 {
 	t_pollable *const	pollable = arg;
 
-	if (!pollable_read(pollable))
+	// if (!pollable_read(pollable))
 
 }
 

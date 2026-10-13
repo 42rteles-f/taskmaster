@@ -1,5 +1,7 @@
+// Custom Headers
 #include <server.h>
-
+#include "server_internal.h"
+// Standard Headers
 #include <poll.h>
 #include <stddef.h>
 

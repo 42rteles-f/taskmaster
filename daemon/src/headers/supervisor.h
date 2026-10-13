@@ -15,10 +15,11 @@ typedef struct {
 	t_vector				*programs;
 	t_supervisor_handler	commands[IPC_COUNT];
 
-	void	*(*init)();
-	void	*(*update)();
-	void	*(*sync)();
-	void	*(*shutdown)();
+	bool	(*init)();
+	bool	(*start)();
+	bool	(*update)();
+	bool	(*sync)();
+	void	(*shutdown)();	
 	void	(*destroy)();
 
 	t_ipc_message	(*handle_request)(t_ipc_message *const);

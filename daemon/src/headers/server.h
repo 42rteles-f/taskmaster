@@ -9,7 +9,6 @@
 # define READSIZE	1024
 # define ERROR_SEND printf("TEMP. Error. %s, %s, %s\n", strerror(errno), __func__, __LINE__);
 
-typedef struct  protoent	t_protocol;
 typedef struct  sockaddr_un	t_unsock;
 typedef struct 	pollfd		t_pollfd;
 

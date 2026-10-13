@@ -1,8 +1,9 @@
+// Custom Headers
 #include <server.h>
 #include <ipc.h>
-#include <pollable.h>
-#include "pollfd.c"
-
+#include "server_internal.h"
+#include "pollable.h"
+// Standard Headers
 #include <poll.h>
 #include <sys/socket.h>
 #include <errno.h>
