@@ -29,6 +29,18 @@ typedef struct s_config {
 	t_strmap		env;
 }	t_config;
 
+void		config_destroy(void *element);
+t_config	config_init(void);
+void		copy_string_from_scalar(const char *source, char **destination);
+void		copy_unsigned_from_scalar(const char *source,
+										  unsigned int *destination);
+void		copy_mode_from_scalar(const char *source, mode_t *destination);
+void		copy_bool_from_scalar(const char *source, bool *destination);
+void		copy_autorestart_from_scalar(const char *source,
+											 t_autorestart *destination);
+void		copy_signal_from_scalar(const char *source, int *destination);
+
+
 #endif
 
 
