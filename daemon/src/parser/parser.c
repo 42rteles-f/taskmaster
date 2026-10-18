@@ -277,54 +277,68 @@ static t_uovector	*extract_configs(yaml_node_t *programs)
 	return (configs);
 }
 
-t_uovector	*parse_yaml_file(const char *path)
-{
-	yaml_parser_t	parser;
-	yaml_document_t	document;
-	yaml_node_t		*root;
-	yaml_node_t		*programs;
-	t_uovector		*configs;
-	FILE			*file;
+typedef struct {
+    FILE			*file;
+    yaml_parser_t	parser;
+    yaml_document_t	document;
 	bool			parser_initialized;
-	bool			document_loaded;
+    bool			document_loaded;
+} t_yaml_state;
 
-	file = NULL;
-	configs = NULL;
-	parser_initialized = false;
-	document_loaded = false;
-	file = fopen(path, "rb");
-	if (file == NULL || !yaml_parser_initialize(&parser))
+static void yaml_state_cleanup(t_yaml_state *s)
+{
+    if (s == NULL)
+        return;
+    if (s->document_loaded)
+        yaml_document_delete(&s->document);
+	if (s->parser_initialized)
+		yaml_parser_delete(&s->parser);
+    if (s->file)
+        fclose(s->file);
+	*s = (t_yaml_state){0};
+}
+
+yaml_node_t	*get_yaml_value_node(const char *path, t_yaml_state *const state, const char *name)
+{
+	yaml_node_t		*root;
+	yaml_node_t		*node;
+
+	state->file = fopen(path, "rb");
+	if (state->file == NULL || !yaml_parser_initialize(&state->parser))
 		goto error;
-	parser_initialized = true;
-	yaml_parser_set_input_file(&parser, file);
-	if (!yaml_parser_load(&parser, &document))
+	state->parser_initialized = true;
+
+	yaml_parser_set_input_file(&state->parser, state->file);
+	if (!yaml_parser_load(&state->parser, &state->document))
 		goto error;
-	document_loaded = true;
-	fclose(file);
-	file = NULL;
-	g_document = &document;
-	root = yaml_document_get_root_node(&document);
+	state->document_loaded = true;
+
+	root = yaml_document_get_root_node(&state->document);
 	if (root == NULL || root->type != YAML_MAPPING_NODE)
 		goto error;
-	programs = mapping_value(root, "programs");
-	if (programs == NULL || programs->type != YAML_MAPPING_NODE)
+
+	node = mapping_value(root, name);
+	if (node == NULL || node->type != YAML_MAPPING_NODE)
 		goto error;
-	configs = extract_configs(programs);
-	g_document = NULL;
-	g_program_name = NULL;
-	yaml_document_delete(&document);
-	yaml_parser_delete(&parser);
-	return (configs);
+
+	return (node);
 error:
-	g_document = NULL;
-	g_program_name = NULL;
-	if (configs != NULL)
-		delete_vector(configs);
-	if (document_loaded)
-		yaml_document_delete(&document);
-	if (parser_initialized)
-		yaml_parser_delete(&parser);
-	if (file != NULL)
-		fclose(file);
+	yaml_state_cleanup(state);
 	return (NULL);
 }
+
+t_uovector	*parse_yaml_file(const char *path)
+{
+	t_yaml_state	state;
+	yaml_node_t		*programs;
+	t_uovector		*configs;
+
+	configs = NULL;
+	state = (t_yaml_state){0};
+	programs = get_yaml_value_node(path, &state, "programs");
+	if (!programs)
+		configs = extract_configs(programs);
+	yaml_state_cleanup(&state);
+	return (configs);
+}
+
