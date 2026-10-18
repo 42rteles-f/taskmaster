@@ -29,7 +29,18 @@ static yaml_node_t	*mapping_value(yaml_node_t *mapping, const char *wanted)
 	return (NULL);
 }
 
-static int	signal_number(const char *name)
+static const char	*yaml_value_by_key(yaml_node_t *mapping,
+		const char *wanted)
+{
+	yaml_node_t	*value;
+
+	value = mapping_value(mapping, wanted);
+	if (value == NULL || value->type != YAML_SCALAR_NODE)
+		return (NULL);
+	return ((const char *)value->data.scalar.value);
+}
+
+static void	copy_signal_from_scalar(int *destination, const char *source)
 {
 	static const struct {
 		const char	*name;
@@ -42,14 +53,19 @@ static int	signal_number(const char *name)
 	};
 	size_t	i;
 
+	if (source == NULL || destination == NULL)
+		return ;
+	*destination = -1;
 	i = 0;
 	while (i < sizeof(signals) / sizeof(signals[0]))
 	{
-		if (strcmp(name, signals[i].name) == 0)
-			return (signals[i].number);
+		if (strcmp(source, signals[i].name) == 0)
+		{
+			*destination = signals[i].number;
+			return ;
+		}
 		i++;
 	}
-	return (-1);
 }
 
 void	*copy_value_from_program(yaml_node_t *program, char *key,
@@ -86,7 +102,6 @@ void	set_value_from_program(yaml_node_t *program, char *key,
 		void *dest, size_t size)
 {
 	yaml_node_t		*value;
-	bool			boolean;
 	t_autorestart	restart;
 	int				signal;
 	unsigned int	number;
@@ -115,7 +130,7 @@ void	set_value_from_program(yaml_node_t *program, char *key,
 	}
 	else if (strcmp(key, "stopsignal") == 0 && size == sizeof(int))
 	{
-		signal = signal_number(scalar);
+		copy_signal_from_scalar(&signal, scalar);
 		memcpy(dest, &signal, size);
 	}
 	else
@@ -211,7 +226,7 @@ static t_config	config_default(void)
 	return (config);
 }
 
-t_config	extract_config(yaml_node_t *program)
+t_config	extract_config_legacy(yaml_node_t *program)
 {
 	t_config	config;
 
@@ -243,6 +258,152 @@ t_config	extract_config(yaml_node_t *program)
 	copy_value_from_program(program, "stderr", &config.stderr_path,
 		sizeof(config.stderr_path));
 	set_environment(program, &config);
+	return (config);
+}
+
+static void	copy_string_from_scalar(char **destination, const char *source)
+{
+	char	*copy;
+
+	if (source == NULL || destination == NULL)
+		return ;
+	copy = strdup(source);
+	if (copy != NULL)
+		*destination = copy;
+}
+
+static void	copy_unsigned_from_scalar(unsigned int *destination,
+		const char *source)
+{
+	if (source == NULL || destination == NULL)
+		return ;
+	*destination = (unsigned int)strtoul(source, NULL, 10);
+}
+
+static void	copy_mode_from_scalar(mode_t *destination, const char *source)
+{
+	if (source == NULL || destination == NULL)
+		return ;
+	*destination = (mode_t)strtoul(source, NULL, 8);
+}
+
+static void	copy_bool_from_scalar(bool *destination, const char *source)
+{
+	if (source == NULL || destination == NULL)
+		return ;
+	*destination = (strcmp(source, "true") == 0);
+}
+
+static void	copy_autorestart_from_scalar(t_autorestart *destination,
+		const char *source)
+{
+	if (source == NULL || destination == NULL)
+		return ;
+	*destination = AUTORESTART_UNEXPECTED;
+	if (strcmp(source, "never") == 0 || strcmp(source, "false") == 0)
+		*destination = AUTORESTART_NEVER;
+	else if (strcmp(source, "always") == 0 || strcmp(source, "true") == 0)
+		*destination = AUTORESTART_ALWAYS;
+}
+
+static void	copy_exitcodes_from_sequence(bool destination[256],
+		yaml_node_t *source)
+{
+	yaml_node_item_t	*item;
+	yaml_node_t		*value;
+	unsigned int	code;
+
+	if (source == NULL || destination == NULL
+		|| source->type != YAML_SEQUENCE_NODE)
+		return ;
+	memset(destination, 0, sizeof(bool) * 256);
+	item = source->data.sequence.items.start;
+	while (item < source->data.sequence.items.top)
+	{
+		value = yaml_document_get_node(g_document, *item);
+		if (value != NULL && value->type == YAML_SCALAR_NODE)
+		{
+			code = (unsigned int)strtoul((char *)value->data.scalar.value,
+					NULL, 10);
+			if (code < 256)
+				destination[code] = true;
+		}
+		item++;
+	}
+}
+
+static void	copy_environment_from_mapping(t_strmap *destination,
+		yaml_node_t *source)
+{
+	yaml_node_pair_t	*pair;
+	yaml_node_t		*key;
+	yaml_node_t		*value;
+
+	if (source == NULL || destination == NULL
+		|| source->type != YAML_MAPPING_NODE)
+		return ;
+	pair = source->data.mapping.pairs.start;
+	while (pair < source->data.mapping.pairs.top)
+	{
+		key = yaml_document_get_node(g_document, pair->key);
+		value = yaml_document_get_node(g_document, pair->value);
+		if (key != NULL && value != NULL && key->type == YAML_SCALAR_NODE
+			&& value->type == YAML_SCALAR_NODE)
+			destination->set(destination, key->data.scalar.value,
+				value->data.scalar.value);
+		pair++;
+	}
+}
+
+t_config	extract_config(yaml_node_t *program)
+{
+	t_config	config;
+	const char	*value;
+	yaml_node_t	*node;
+
+	config = config_default();
+	copy_string_from_scalar(&config.name, g_program_name);
+
+	value = yaml_document_get_value_by_key(program, "cmd");
+	copy_string_from_scalar(&config.cmd, value);
+	
+	value = yaml_document_get_value_by_key(program, "numprocs");
+	copy_unsigned_from_scalar(&config.numprocs, value);
+	
+	value = yaml_document_get_value_by_key(program, "umask");
+	copy_mode_from_scalar(&config.umask, value);
+	
+	value = yaml_document_get_value_by_key(program, "workingdir");
+	copy_string_from_scalar(&config.workingdir, value);
+	
+	value = yaml_document_get_value_by_key(program, "autostart");
+	copy_bool_from_scalar(&config.autostart, value);
+	
+	value = yaml_document_get_value_by_key(program, "autorestart");
+	copy_autorestart_from_scalar(&config.autorestart, value);
+	
+	node = mapping_value(program, "exitcodes");
+	copy_exitcodes_from_sequence(config.exitcodes, node);
+	
+	value = yaml_document_get_value_by_key(program, "startretries");
+	copy_unsigned_from_scalar(&config.startretries, value);
+	
+	value = yaml_document_get_value_by_key(program, "starttime");
+	copy_unsigned_from_scalar(&config.starttime, value);
+	
+	value = yaml_document_get_value_by_key(program, "stopsignal");
+	copy_signal_from_scalar(&config.stopsignal, value);
+	
+	value = yaml_document_get_value_by_key(program, "stoptime");
+	copy_unsigned_from_scalar(&config.stoptime, value);
+	
+	value = yaml_document_get_value_by_key(program, "stdout");
+	copy_string_from_scalar(&config.stdout_path, value);
+	
+	value = yaml_document_get_value_by_key(program, "stderr");
+	copy_string_from_scalar(&config.stderr_path, value);
+	node = mapping_value(program, "env");
+	copy_environment_from_mapping(&config.env, node);
 	return (config);
 }
 
