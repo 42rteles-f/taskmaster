@@ -9,14 +9,15 @@
 #include <string.h>
 #include <unistd.h>
 
+static volatile sig_atomic_t	g_interrupt;
+
+
 void	control_d(t_control *get)
 {
-	if (get->interactive)
-		write(STDOUT_FILENO, "exit\n", 5);
+	rl_replace_line("", 1);
+	write(STDOUT_FILENO, "exit\n", 5);
 	get->running = false;
 }
-
-static volatile sig_atomic_t	g_interrupt;
 
 static void	control_c(int signal)
 {
@@ -36,17 +37,10 @@ static int	clear_interrupted_line(void)
 	return (0);
 }
 
-static bool	setup_signals(bool interactive)
+static bool	setup_signals(void)
 {
 	struct sigaction	action;
 
-	memset(&action, 0, sizeof(action));
-	sigemptyset(&action.sa_mask);
-	action.sa_handler = SIG_IGN;
-	if (sigaction(SIGPIPE, &action, NULL) < 0)
-		return (false);
-	if (!interactive)
-		return (true);
 	action.sa_handler = control_c;
 	action.sa_flags = SA_RESTART;
 	if (sigaction(SIGINT, &action, NULL) < 0)
@@ -60,15 +54,17 @@ static bool	setup_signals(bool interactive)
 	return (true);
 }
 
-bool	setup(t_control *this, bool interactive)
+bool	terminal_setup(t_control *this, int argc)
 {
 	*this = (t_control){
-		.socket = -1,
+		.socket = ipc_connect(),
 		.status = EXIT_SUCCESS,
-		.interactive = interactive,
 		.running = true
 	};
-	if (!setup_signals(interactive))
+	if (this->socket < 0)
+		return (false);
+
+	if (argc > 1 && !setup_signals())
 	{
 		fprintf(stderr, "taskmasterctl: cannot configure signals: %s\n",
 			strerror(errno));
@@ -81,19 +77,25 @@ bool	setup(t_control *this, bool interactive)
 
 void	input_reset(t_control *this)
 {
+	size_t	index;
+
 	free(this->input);
 	this->input = NULL;
-	this->payload = NULL;
-	this->command = IPC_EMPTY;
+	ipc_message_reset(&this->message);
+	index = 0;
+	while (this->split && this->split[index])
+		free(this->split[index++]);
+	free(this->split);
+	this->split = NULL;
 	this->action = TERMINAL_REQUEST;
 }
 
-void	end_terminal(t_control *this)
+void	terminal_destroy(t_control *this)
 {
 	input_reset(this);
-	if (this->socket >= 0)
-		close(this->socket);
+	if (this->socket >= 0) close(this->socket);
 	this->socket = -1;
 	rl_event_hook = NULL;
+	this->running = false;
 	rl_clear_history();
 }

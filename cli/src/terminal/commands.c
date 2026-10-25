@@ -1,6 +1,6 @@
 #include <terminal.h>
+#include "terminal_internal.h"
 
-#include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,132 +8,172 @@
 
 typedef struct s_command_definition
 {
-	const char			*name;
-	t_ipc_type			type;
-	t_terminal_action	action;
-	bool				requires_target;
+	const char	*name;
+	t_exe		handler;
 }	t_command_definition;
 
-static const t_command_definition	g_commands[] = {
-	{"status", IPC_STATUS, TERMINAL_REQUEST, false},
-	{"start", IPC_START, TERMINAL_REQUEST, true},
-	{"stop", IPC_STOP, TERMINAL_REQUEST, true},
-	{"restart", IPC_RESTART, TERMINAL_REQUEST, true},
-	{"reload", IPC_RELOAD, TERMINAL_REQUEST, false},
-	{"shutdown", IPC_SHUTDOWN, TERMINAL_REQUEST, false},
-	{"help", IPC_EMPTY, TERMINAL_HELP, false},
-	{"exit", IPC_EMPTY, TERMINAL_EXIT, false},
-	{"quit", IPC_EMPTY, TERMINAL_EXIT, false},
-	{NULL, IPC_EMPTY, TERMINAL_REQUEST, false}
-};
+static bool	status_command(t_control *this);
+static bool	start_command(t_control *this);
+static bool	stop_command(t_control *this);
+static bool	restart_command(t_control *this);
+static bool	reload_command(t_control *this);
+static bool	shutdown_command(t_control *this);
+static bool	help_command(t_control *this);
+static bool	exit_command(t_control *this);
+static bool	invalid_command(t_control *this);
 
-static char	*skip_spaces(char *input)
-{
-	while (*input && isspace((unsigned char)*input))
-		input++;
-	return (input);
-}
+static const t_command_definition	g_commands[] = {
+	{"status", status_command},
+	{"start", start_command},
+	{"stop", stop_command},
+	{"restart", restart_command},
+	{"reload", reload_command},
+	{"shutdown", shutdown_command},
+	{"help", help_command},
+	{"exit", exit_command},
+	{"quit", exit_command},
+	{NULL, invalid_command}
+};
 
 bool	normalize_input(t_control *this)
 {
-	char	*start;
-	char	*end;
+	this->split = ft_split_space(this->input);
 
-	if (!this->input)
-		return (false);
-	start = skip_spaces(this->input);
-	if (!*start)
-		return (false);
-	if (start != this->input)
-		memmove(this->input, start, strlen(start) + 1);
-	end = this->input + strlen(this->input);
-	while (end > this->input && isspace((unsigned char)end[-1]))
-		end--;
-	*end = '\0';
-	return (*this->input != '\0');
+	return (this->split && this->split[0]);
 }
 
-static const t_command_definition	*find_command(const char *name)
+static bool	validate_no_arguments(t_control *this)
 {
-	size_t	index;
-
-	index = 0;
-	while (g_commands[index].name)
-	{
-		if (strcmp(name, g_commands[index].name) == 0)
-			return (&g_commands[index]);
-		index++;
-	}
-	return (NULL);
+	if (!this->split[1])
+		return (true);
+	fprintf(stderr, "taskmasterctl: usage: %s\n", this->split[0]);
+	this->status = 2;
+	return (false);
 }
 
-static bool	invalid_arguments(const t_command_definition *definition,
-		const char *payload)
+static bool	validate_program(t_control *this)
 {
-	const char	*cursor;
+	if (this->split[1] && !this->split[2])
+		return (true);
+	fprintf(stderr, "taskmasterctl: usage: %s <program>\n", this->split[0]);
+	this->status = 2;
+	return (false);
+}
 
-	cursor = payload;
-	while (*cursor && !isspace((unsigned char)*cursor))
-		cursor++;
-	if (definition->requires_target && (!*payload || *cursor))
+static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
+{
+	size_t	payload_len;
+
+	ipc_message_reset(&this->message);
+	payload_len = (payload) ? strlen(payload) + 1 : 0;
+	if (payload_len > IPC_MAX_PAYLOAD || payload_len > UINT32_MAX)
 	{
-		fprintf(stderr, "taskmasterctl: usage: %s <program>\n",
-			definition->name);
-		return (true);
+		fprintf(stderr, "taskmasterctl: command payload is too large\n");
+		this->status = 2;
+		return (false);
 	}
-	if (!definition->requires_target && *payload)
-	{
-		fprintf(stderr, "taskmasterctl: usage: %s\n", definition->name);
-		return (true);
-	}
+	this->message = (t_ipc_message) {
+		.header = {
+			.type = type,
+			.payload_len = payload_len
+		},
+		payload = payload
+	};
+	this->action = TERMINAL_REQUEST;
+	return (true);
+}
+
+static bool	status_command(t_control *this)
+{
+	if (!validate_no_arguments(this))
+		return (false);
+	return (setup_request(this, IPC_STATUS, NULL));
+}
+
+static bool	start_command(t_control *this)
+{
+	if (!validate_program(this))
+		return (false);
+	return (setup_request(this, IPC_START, this->split[1]));
+}
+
+static bool	stop_command(t_control *this)
+{
+	if (!validate_program(this))
+		return (false);
+	return (setup_request(this, IPC_STOP, this->split[1]));
+}
+
+static bool	restart_command(t_control *this)
+{
+	if (!validate_program(this))
+		return (false);
+	return (setup_request(this, IPC_RESTART, this->split[1]));
+}
+
+static bool	reload_command(t_control *this)
+{
+	if (!validate_no_arguments(this))
+		return (false);
+	return (setup_request(this, IPC_RELOAD, NULL));
+}
+
+static bool	shutdown_command(t_control *this)
+{
+	if (!validate_no_arguments(this))
+		return (false);
+	return (setup_request(this, IPC_SHUTDOWN, NULL));
+}
+
+static bool	help_command(t_control *this)
+{
+	if (!validate_no_arguments(this))
+		return (false);
+	this->action = TERMINAL_HELP;
+	return (true);
+}
+
+static bool	exit_command(t_control *this)
+{
+	if (!validate_no_arguments(this))
+		return (false);
+	this->action = TERMINAL_EXIT;
+	return (true);
+}
+
+static bool	invalid_command(t_control *this)
+{
+	fprintf(stderr, "taskmasterctl: unknown command: %s\n", this->split[0]);
+	fprintf(stderr, "Type 'help' for available commands.\n");
+	this->status = 2;
 	return (false);
 }
 
 bool	structure_commands(t_control *this)
 {
-	const t_command_definition	*definition;
-	char						*payload;
-	char						*separator;
+	size_t	index;
 
-	separator = this->input;
-	while (*separator && !isspace((unsigned char)*separator))
-		separator++;
-	payload = separator;
-	if (*separator)
-	{
-		*separator = '\0';
-		payload = skip_spaces(separator + 1);
-	}
-	definition = find_command(this->input);
-	if (!definition)
-	{
-		fprintf(stderr, "taskmasterctl: unknown command: %s\n",
-			this->input);
-		fprintf(stderr, "Type 'help' for available commands.\n");
-		this->status = 2;
-		return (false);
-	}
-	if (invalid_arguments(definition, payload))
-	{
-		this->status = 2;
-		return (false);
-	}
-	this->command = definition->type;
-	this->action = definition->action;
-	this->payload = payload;
-	return (true);
+	index = 0;
+	while (
+		g_commands[index].name
+		&& strcmp(this->split[0], g_commands[index].name) != 0
+	) index++;
+
+	return (g_commands[index].handler(this));
 }
 
 static void	print_help(void)
 {
-	printf("Commands:\n"
+	printf(
+		"Commands:\n"
 		"  status             show all configured programs\n"
 		"  start <program>    start a program\n"
 		"  stop <program>     stop a program\n"
 		"  restart <program>  restart a program\n"
 		"  reload             reload the configuration\n"
 		"  shutdown           stop Taskmaster\n"
-		"  exit | quit        close this client\n");
+		"  exit | quit        close this client\n"
+	);
 	fflush(stdout);
 }
 
@@ -156,38 +196,11 @@ static void	print_response(const t_ipc_message *response)
 
 static bool	execute_request(t_control *this)
 {
-	t_ipc_message	request;
 	t_ipc_message	response;
-	size_t			payload_len;
 
-	request = ipc_message_init();
 	response = ipc_message_init();
-	if (this->socket < 0)
-	{
-		this->socket = ipc_connect();
-		if (this->socket < 0)
-		{
-			fprintf(stderr, "taskmasterctl: cannot connect to %s: %s\n",
-				SOCKET_PATH, strerror(errno));
-			this->status = 1;
-			this->running = false;
-			return (false);
-		}
-	}
-	payload_len = 0;
-	if (*this->payload)
-		payload_len = strlen(this->payload) + 1;
-	if (payload_len > IPC_MAX_PAYLOAD || payload_len > UINT32_MAX)
-	{
-		fprintf(stderr, "taskmasterctl: command payload is too large\n");
-		this->status = 2;
-		return (false);
-	}
-	request.header.type = this->command;
-	request.header.payload_len = (uint32_t)payload_len;
-	request.payload = this->payload;
 	errno = 0;
-	if (ipc_send(this->socket, &request.header, request.payload) < 0
+	if (ipc_send(this->socket, &this->message.header, this->message.payload) < 0
 		|| ipc_recv(this->socket, &response.header, &response.payload) < 0)
 	{
 		if (errno)
@@ -219,7 +232,7 @@ void	run_input(t_control *this)
 	else
 	{
 		execute_request(this);
-		if (this->command == IPC_SHUTDOWN)
+		if (this->message.header.type == IPC_SHUTDOWN)
 			this->running = false;
 	}
 }

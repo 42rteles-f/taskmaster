@@ -16,19 +16,6 @@ t_control	*terminal(void)
 
 static void	catch_input(t_control *this)
 {
-	size_t	capacity;
-
-	if (!this->interactive)
-	{
-		capacity = 0;
-		if (getline(&this->input, &capacity, stdin) < 0)
-		{
-			free(this->input);
-			this->input = NULL;
-			control_d(this);
-		}
-		return ;
-	}
 	this->input = readline(TERMINAL_PROMPT);
 	if (!this->input)
 		control_d(this);
@@ -40,22 +27,19 @@ static char	*join_arguments(int argc, char **argv)
 {
 	size_t	length;
 	char	*input;
-	int		index;
 
 	length = 0;
-	index = 1;
-	while (index < argc)
-		length += strlen(argv[index++]) + 1;
+	for (size_t index = 0; index < argc; index++)
+		length += strlen(argv[index]) + 1;
+
 	input = malloc(length);
 	if (!input)
 		return (NULL);
-	*input = '\0';
-	index = 1;
-	while (index < argc)
-	{
-		if (index > 1)
+
+	for (size_t index = 0; index < argc; index++) {
+		if (index > 0) 
 			strcat(input, " ");
-		strcat(input, argv[index++]);
+		strcat(input, argv[index]);
 	}
 	return (input);
 }
@@ -71,28 +55,27 @@ int	main(int argc, char **argv)
 {
 	t_control	*const this = terminal();
 
-	if (!setup(this, argc == 1 && isatty(STDIN_FILENO)))
+	if (!terminal_setup(this, argc))
 	{
-		end_terminal(this);
+		terminal_destroy(this);
 		return (this->status);
 	}
+
 	if (argc > 1)
 	{
-		this->input = join_arguments(argc, argv);
-		if (!this->input)
-			this->status = EXIT_FAILURE;
-		else
+		printf("here\n");
+		this->input = join_arguments(argc - 1, &(argv[1]));
+		process_input(this);
+		return (this->status);
+	}
+
+	while (this->running)
+	{
+		catch_input(this);
+		if (this->input)
 			process_input(this);
 	}
-	else
-	{
-		while (this->running)
-		{
-			catch_input(this);
-			if (this->input)
-				process_input(this);
-		}
-	}
-	end_terminal(this);
+	terminal_destroy(this);
+
 	return (this->status);
 }
