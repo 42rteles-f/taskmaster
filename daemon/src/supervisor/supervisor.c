@@ -1,15 +1,29 @@
 #include <supervisor.h>
 #include <program.h>
 #include <ipc.h>
-#include "commands.c"
+#include "supervisor_internal.h"
 
-int	program_name_compare(void *element, void *name)
+t_supervisor	*supervisor(void)
 {
+	static t_supervisor	this = {
+		.init = supervisor_init,
+		.handle_request = supervisor_handle_request,
+		.destroy = supervisor_destroy
+		// .destroy = supervisor_destroy,
+	};
+
+	return (&this);
+}
+
+int	program_name_compare(const void *element, const void *name, size_t size)
+{
+	(void)size;
 	return (strcmp(((t_program*)element)->name, name));
 }
 
-void	program_destroy(t_program *this)
+void	program_destroy(void *arg)
 {
+	t_program	*const this = arg;
 	free(this->name);
 	//kill process if alive
 }
@@ -19,7 +33,7 @@ void	call_program_execute(void *element, int)
 	((t_program*)element)->execute(element);
 }
 
-void	set_program_unrevised(void *element, int)
+void	set_program_unrevised(void *element, size_t)
 {
 	((t_program*)element)->revised = false;
 }
@@ -47,39 +61,39 @@ bool	supervisor_init(void)
 
 bool	supervisor_update(void)
 {
-	t_supervisor	*const this = supervisor();
-	t_uovector		*new_data;
-	t_program		*new_prog;
-	t_program		*old_prog;
+	// t_supervisor	*const this = supervisor();
+	// t_uovector		*new_data;
+	// t_program		*new_prog;
+	// t_program		*old_prog;
 
-	//pass config data into supervisor structure
-	if (!parse_config_file(SUPERVISOR_CONFIG_FILE)) {
-		ERROR_SEND;
-		return (false);
-	}
+	// //pass config data into supervisor structure
+	// if (!parse_config_file(SUPERVISOR_CONFIG_FILE)) {
+	// 	ERROR_SEND;
+	// 	return (false);
+	// }
 
-	new_data = new_uovector(sizeof(t_program));
-	vector_custom(this->programs, NULL, program_name_compare, NULL);
-	fill_vector(new_data);
+	// new_data = new_uovector(sizeof(t_program));
+	// vector_custom(this->programs, NULL, program_name_compare, NULL);
+	// fill_vector(new_data);
 
-	this->programs->for_each(this->programs, set_program_unrevised);
-	for (size_t index = 0; index < new_data->size; index++)
-	{
-		new_prog = new_data->at(new_data, index);
-		old_prog = this->programs->find(this->programs, new_prog->name);
-		if (!old_prog)
-			old_prog = this->programs->push(this->programs, new_prog);
-		old_prog->sync(old_prog, new_prog);
-		old_prog->revised = true;
-	}
-	// make for_each_with(), receives an arg to pass along
-	// then this loop and the next call can also be for_each calls
+	// this->programs->for_each(this->programs, set_program_unrevised);
+	// for (size_t index = 0; index < new_data->size; index++)
+	// {
+	// 	new_prog = new_data->at(new_data, index);
+	// 	old_prog = this->programs->find(this->programs, new_prog->name);
+	// 	if (!old_prog)
+	// 		old_prog = this->programs->push(this->programs, new_prog);
+	// 	old_prog->sync(old_prog, new_prog);
+	// 	old_prog->revised = true;
+	// }
+	// // make for_each_with(), receives an arg to pass along
+	// // then this loop and the next call can also be for_each calls
 
-	delete_vector(new_data);
-	supervisor_execute(this);
+	// delete_vector(new_data);
+	// supervisor_execute(this);
 }
 
-supervisor_update_programs(t_uovector)
+// supervisor_update_programs(t_uovector)
 
 bool	supervisor_set_signals(void)
 {

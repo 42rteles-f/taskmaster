@@ -5,7 +5,16 @@
 # include <stddef.h>
 # include <indexmap.h>
 
+# define CONFIG_EXIT_COUNT 256
+
+typedef enum e_autostart {
+	AUTOSTART_INVALID = -1,
+	AUTOSTART_FALSE,
+	AUTOSTART_TRUE
+} t_autostart;
+
 typedef enum e_autorestart {
+	AUTORESTART_INVALID = -1,
 	AUTORESTART_NEVER,
 	AUTORESTART_ALWAYS,
 	AUTORESTART_UNEXPECTED
@@ -17,9 +26,9 @@ typedef struct s_config {
 	unsigned int	numprocs;
 	mode_t			umask;
 	char			*workingdir;
-	bool			autostart;
+	t_autostart		autostart;
 	t_autorestart	autorestart;
-	bool			exitcodes[256];
+	bool			exitcodes[CONFIG_EXIT_COUNT];
 	unsigned int	startretries;
 	unsigned int	starttime;
 	int				stopsignal;
@@ -35,10 +44,12 @@ void		copy_string_from_scalar(const char *source, char **destination);
 void		copy_unsigned_from_scalar(const char *source,
 										  unsigned int *destination);
 void		copy_mode_from_scalar(const char *source, mode_t *destination);
-void		copy_bool_from_scalar(const char *source, bool *destination);
+void		copy_autostart_from_scalar(const char *source,
+									 t_autostart *destination);
 void		copy_autorestart_from_scalar(const char *source,
 											 t_autorestart *destination);
 void		copy_signal_from_scalar(const char *source, int *destination);
+bool		config_validate(t_config *cfg);
 
 
 #endif

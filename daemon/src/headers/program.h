@@ -13,6 +13,7 @@ typedef	struct {
 
 typedef struct s_program {
 	size_t		id;
+	char		*name;
 	bool		revised;
 	t_config	*config;
 	t_process	process;

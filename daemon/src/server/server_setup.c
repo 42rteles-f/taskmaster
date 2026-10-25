@@ -12,9 +12,8 @@ bool	server_destroy(void)
 {
 	t_server *const	this = server();
 
-	if (this->pollables) delete_vector(this->pollables);
-	if (-1 < this->socket) close(this->socket);
-	*this = (t_server){0};
+	if (this->pollables) delete_indexmap(this->pollables);
+	*this = (t_server){.socket = -1};
 	return (true);
 }
 
@@ -24,8 +23,8 @@ bool	server_init(void)
 
 	if (this->initialized) return (true);
 
-	this->pollables = new_indexmap(sizeof(t_pollfd*), sizeof(t_pollable));
-	this->pollables->custom_keys(this->pollables, NULL, pollfd_compare, NULL);
+	this->pollables = new_indexmap(sizeof(t_pollfd), sizeof(t_pollable));
+	this->pollables->custom_keys(this->pollables, NULL, pollfd_compare, pollfd_destroy);
 	this->pollables->custom_values(this->pollables, NULL, NULL, pollable_destroy);
 	this->initialized = true;
 	return (true);
@@ -34,14 +33,17 @@ bool	server_init(void)
 void	server_set_socket(t_server *const this, int socket)
 {
 	t_pollable	poll_obj;
+	t_pollfd	pollfd;
 
-	if (this->socket)
-		this->pollables->remove(this->pollables, &(t_pollfd){ .fd = this->socket });
-	poll_obj = pollable_init(socket);
+	if (this->socket >= 0)
+		this->pollables->remove(this->pollables,
+			&(t_pollfd){.fd = this->socket});
+	pollfd = pollfd_init(socket);
+	poll_obj = pollable_init();
 	poll_obj.handler = server_handle_connections;
 	poll_obj.context = this;
-	this->socket = poll_obj.pollfd;
-	this->pollables->set(this->pollables, poll_obj.pollfd, &poll_obj);
+	this->socket = socket;
+	this->pollables->set(this->pollables, &pollfd, &poll_obj);
 }
 
 bool	server_open_connections(t_server *const this)
@@ -51,6 +53,7 @@ bool	server_open_connections(t_server *const this)
 
 	if (this->online)	return (true);
 
+	fd = -1;
 	addr = (t_unsock) { .sun_family = AF_UNIX };
 	snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", SOCKET_PATH);
     unlink(SOCKET_PATH);
@@ -59,7 +62,7 @@ bool	server_open_connections(t_server *const this)
 		|| listen(fd, SOMAXCONN) < 0
 	) {
 		ERROR_SEND;
-        return (false);
+		goto error;
 	}
 
 	server_set_socket(this, fd);
@@ -68,7 +71,7 @@ bool	server_open_connections(t_server *const this)
     return (true);
 
 error:
-	if (this->socket >= 0) close(this->socket);
+	if (fd >= 0) close(fd);
 	this->socket = -1;
 	unlink(SOCKET_PATH);
 	return (false);

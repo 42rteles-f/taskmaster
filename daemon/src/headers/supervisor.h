@@ -8,7 +8,7 @@
 
 #define SUPERVISOR_CONFIG_FILE	"taskmaster.yaml"
 
-typedef t_ipc_message	(*t_supervisor_handler)(int, void*);
+typedef t_ipc_message	(*t_supervisor_handler)(const t_ipc_message *);
 
 typedef struct {
 	volatile sig_atomic_t	signal;
@@ -28,6 +28,7 @@ typedef struct {
 bool	supervisor_init(void);
 bool	supervisor_update(void);
 bool	supervisor_set_signal(void);
+void	supervisor_destroy(void);
 t_supervisor	*supervisor(void);
 
 #endif

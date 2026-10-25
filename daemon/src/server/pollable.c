@@ -9,7 +9,6 @@ void	pollable_destroy(void *const arg)
 {
 	t_pollable *const	this = arg;
 
-	delete_pollfd(this->pollfd);
 	this->pollfd = NULL;
 	ipc_message_reset(&this->message);
 	this->handler = pollable_do_nothing;
@@ -22,7 +21,7 @@ void	pollable_clear_data(t_pollable *const this)
 
 bool	pollable_read(t_pollable *const this)
 {
-	if (!(this->pollfd->revents & POLLIN))
+	if (this->pollfd == NULL || !(this->pollfd->revents & POLLIN))
 		return (false);
 
 	ipc_message_reset(&this->message);
@@ -40,22 +39,28 @@ int	pollable_send(t_pollable *const this, t_ipc_message *const response)
 {
 	if (response->header.type == IPC_EMPTY)
 		return (0);
-	if (0 != ipc_send(this->pollfd->fd, &response->header, response->payload))
+	if (this->pollfd == NULL
+		|| 0 != ipc_send(this->pollfd->fd, &response->header, response->payload))
 	{
-		close(this->pollfd->fd);
-		this->pollfd->fd = -1;
+		if (this->pollfd != NULL)
+		{
+			close(this->pollfd->fd);
+			this->pollfd->fd = -1;
+		}
 		return (-1);
 	}
 
 	return (0);
 }
 
-void	pollable_do_nothing(struct event_source *const source) { return ; };
+void	pollable_do_nothing(void *source)
+{
+	(void)source;
+}
 
-void	pollable_init(int fd)
+t_pollable	pollable_init(void)
 {
 	return ((t_pollable) {
-		.pollfd = new_pollfd(fd),
 		.message = ipc_message_init(),
 		.handler = pollable_do_nothing,
 	});

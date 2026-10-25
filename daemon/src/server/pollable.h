@@ -17,8 +17,11 @@ typedef struct
 }	t_pollable;
 
 bool		pollable_read(t_pollable *const this);
+int			pollable_send(t_pollable *const this,
+				t_ipc_message *const response);
 void		pollable_destroy(void *const pollable);
 void		pollable_clear_data(t_pollable *const this);
-t_pollable	pollable_init(int fd);
+void		pollable_do_nothing(void *source);
+t_pollable	pollable_init(void);
 
 #endif

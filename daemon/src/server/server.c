@@ -2,6 +2,7 @@
 #include <supervisor.h>
 #include <server.h>
 #include "pollable.h"
+#include "server_internal.h"
 // Standard Headers
 #include <sys/socket.h>
 #include <stddef.h>
@@ -10,7 +11,12 @@
 
 t_server	*server(void)
 {
-	static t_server	this;
+	static t_server	this = {
+		.socket = -1,
+		.init = server_init,
+		.start = server_start,
+		.destroy = server_destroy
+	};
 
 	return (&this);
 }
@@ -32,19 +38,22 @@ void	server_clean_pollables(t_indexmap *const clients)
 	}
 }
 
-void	call_pollable_handler(void *arg, size_t index)
+void	call_pollable_handler(void *key, void *value, size_t index)
 {
+	t_pollable *const	pollable = value;
+
 	(void)index;
-	((t_pollable*)arg)->handler(arg);
+	pollable->pollfd = key;
+	printf("here call pollable %i\n", pollable->pollfd->fd);
+	pollable->handler(pollable);
 }
 
 static inline bool	server_has_connection_request(t_server *this)
 {
-	t_pollable	*const server = this->pollables->get(
-		this->pollables,
-		&(t_pollfd){ .fd = this->socket }
-	);
-	return (server->pollfd->revents & POLLIN);
+	t_pollfd	*const socket = this->pollables->keys.find(
+		&this->pollables->keys, &(t_pollfd){.fd = this->socket});
+
+	return (socket != NULL && (socket->revents & POLLIN));
 }
 
 void	server_handle_pipe_trigger(void *const arg)
@@ -59,20 +68,25 @@ void	server_handle_connections(void *const arg)
 {
 	t_server *const	this = ((t_pollable*)arg)->context;
 	t_pollable		new_client;
+	t_pollfd		new_pollfd;
 	int				new_fd;
 
+	TRACE;
+	HERE;
 	if (!server_has_connection_request(this))
 		return ;
-
+	THERE;
 	new_fd = ipc_accept(this->socket);
 	if (new_fd < 0)
 	{
 		ERROR_SEND;
 		return ;
 	}
-	new_client = pollable_init(new_fd);
+	new_pollfd = pollfd_init(new_fd);
+	new_client = pollable_init();
 	new_client.handler = server_handle_pollable;
-	this->pollables->set(this->pollables, new_client.pollfd, &new_client);
+	printf("new client added\n");
+	this->pollables->set(this->pollables, &new_pollfd, &new_client);
 }
 
 void	server_handle_pollable(void *const arg)
@@ -82,6 +96,7 @@ void	server_handle_pollable(void *const arg)
 
 	if (!pollable_read(pollable)) return ;
 
+	printf("pollable message\n");
 	response = supervisor()->handle_request(&pollable->message);
 	pollable_send(pollable, &response);
 	ipc_message_reset(&pollable->message);
@@ -105,8 +120,9 @@ bool server_start(void)
 			return (false);
 		}
 
-		this->pollables->values.for_each(this->pollables, call_pollable_handler);
+		this->pollables->for_each(this->pollables, call_pollable_handler);
 		server_clean_pollables(this->pollables);
+		printf("loop end\n");
 	}
 
 	return (true);

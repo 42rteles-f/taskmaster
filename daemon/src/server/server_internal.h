@@ -3,10 +3,13 @@
 
 # include <server.h>
 
-void	    server_handle_connections(void *const arg);
+void		server_handle_connections(void *const arg);
+void		server_handle_pollable(void *const arg);
+bool		server_open_connections(t_server *const this);
 
-t_pollfd	*new_pollfd(size_t fd);
-int	        pollfd_compare(const void *const left, const void *const right, const size_t size);
-void	    delete_pollfd(t_pollfd *const this);
+t_pollfd	pollfd_init(int fd);
+int			pollfd_compare(const void *const left, const void *const right,
+				size_t size);
+void		pollfd_destroy(void *arg);
 
 #endif
