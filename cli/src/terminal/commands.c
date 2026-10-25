@@ -63,9 +63,7 @@ static bool	validate_program(t_control *this)
 static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
 {
 	size_t	payload_len;
-	char	*payload_copy;
 
-	ipc_message_reset(&this->message);
 	payload_len = (payload) ? strlen(payload) + 1 : 0;
 	if (payload_len > IPC_MAX_PAYLOAD || payload_len > UINT32_MAX)
 	{
@@ -73,13 +71,12 @@ static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
 		this->status = 2;
 		return (false);
 	}
-	this->message = (t_ipc_message) {
-		.header = {
-			.type = type,
-			.payload_len = payload_len
-		},
-		.payload = (payload) ? strdup(payload) : NULL
-	};
+	if (!ipc_message_set(&this->message, type, payload, payload_len))
+	{
+		fprintf(stderr, "taskmasterctl: cannot allocate request payload\n");
+		this->status = 1;
+		return (false);
+	}
 	this->action = TERMINAL_REQUEST;
 	return (true);
 }
@@ -212,15 +209,15 @@ static bool	execute_request(t_control *this)
 		else
 			fprintf(stderr,
 				"taskmasterctl: communication failed: connection closed\n");
-		ipc_message_reset(&response);
+		ipc_message_clear(&response);
 		this->status = 1;
 		this->running = false;
 		return (false);
 	}
 	print_response(&response);
-	ipc_message_reset(&response);
-	this->status = 0;
-	return (true);
+	ipc_message_clear(&response);
+	this->status = (response.header.type == IPC_INVALID);
+	return (!this->status);
 }
 
 void	run_input(t_control *this)

@@ -81,7 +81,7 @@ void	input_reset(t_control *this)
 
 	if (this->input) free(this->input);
 	this->input = NULL;
-	ipc_message_reset(&this->message);
+	ipc_message_clear(&this->message);
 	index = 0;
 	while (this->split && this->split[index])
 		free(this->split[index++]);

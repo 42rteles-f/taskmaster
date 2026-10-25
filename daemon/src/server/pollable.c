@@ -10,13 +10,13 @@ void	pollable_destroy(void *const arg)
 	t_pollable *const	this = arg;
 
 	this->pollfd = NULL;
-	ipc_message_reset(&this->message);
+	ipc_message_clear(&this->message);
 	this->handler = pollable_do_nothing;
 }
 
 void	pollable_clear_data(t_pollable *const this)
 {
-	ipc_message_reset(&this->message);
+	ipc_message_clear(&this->message);
 }
 
 bool	pollable_read(t_pollable *const this)
@@ -24,7 +24,7 @@ bool	pollable_read(t_pollable *const this)
 	if (this->pollfd == NULL || !(this->pollfd->revents & POLLIN))
 		return (false);
 
-	ipc_message_reset(&this->message);
+	ipc_message_clear(&this->message);
 	if (this->pollfd->revents & (POLLHUP | POLLERR) ||
 		0 != ipc_recv(this->pollfd->fd, &this->message))
 	{

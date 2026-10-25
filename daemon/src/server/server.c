@@ -101,8 +101,8 @@ void	server_handle_pollable(void *const arg)
 	printf("pollable message\n");
 	response = supervisor()->handle_request(&pollable->message);
 	pollable_send(pollable, &response);
-	ipc_message_reset(&pollable->message);
-	ipc_message_reset(&response);
+	ipc_message_clear(&pollable->message);
+	ipc_message_clear(&response);
 }
 
 bool server_start(void)

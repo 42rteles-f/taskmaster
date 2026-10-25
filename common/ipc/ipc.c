@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <stddef.h>
+#include <string.h>
 #include <sys/un.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -150,7 +151,34 @@ t_ipc_message	ipc_message_init(void)
 	return ((t_ipc_message) { .header = { .type = IPC_EMPTY }});
 }
 
-void ipc_message_reset(t_ipc_message *const message)
+bool	ipc_message_set(t_ipc_message *message, t_ipc_type type,
+		const void *payload, size_t payload_len)
+{
+	void	*copy;
+
+	if (message == NULL || payload_len > IPC_MAX_PAYLOAD
+		|| payload_len > UINT32_MAX || (payload_len > 0 && payload == NULL))
+		return (false);
+	copy = NULL;
+	if (payload_len > 0)
+	{
+		copy = malloc(payload_len);
+		if (copy == NULL)
+			return (false);
+		memcpy(copy, payload, payload_len);
+	}
+	ipc_message_clear(message);
+	*message = (t_ipc_message) {
+		.header = {
+			.type = type,
+			.payload_len = payload_len
+		},
+		.payload = copy
+	};
+	return (true);
+}
+
+void ipc_message_clear(t_ipc_message *const message)
 {
 	if (message->payload) free(message->payload);
 

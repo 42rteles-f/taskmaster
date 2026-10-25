@@ -1,6 +1,8 @@
 #ifndef IPC_H
 # define IPC_H
 
+# include <stdbool.h>
+# include <stddef.h>
 # include <stdint.h>
 
 # define SOCKET_PATH		"/tmp/taskmaster.sock"
@@ -16,7 +18,8 @@ typedef enum e_ipc_type
     IPC_RESTART,
     IPC_RELOAD,
     IPC_SHUTDOWN,
-	IPC_COUNT
+		IPC_COUNT,
+		IPC_INVALID
 } t_ipc_type;
 
 typedef struct s_ipc_header
@@ -37,6 +40,8 @@ int ipc_accept(const int server_fd);
 int	ipc_connect(void);
 
 t_ipc_message	ipc_message_init(void);
-void			ipc_message_reset(t_ipc_message *const message);
+bool			ipc_message_set(t_ipc_message *message, t_ipc_type type,
+					const void *payload, size_t payload_len);
+void			ipc_message_clear(t_ipc_message *const message);
 
 #endif

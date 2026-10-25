@@ -1,12 +1,22 @@
 #include <supervisor.h>
 #include <server.h>
 
+static t_ipc_message	invalid_response(void)
+{
+	t_ipc_message	response;
+
+	response = ipc_message_init();
+	ipc_message_set(&response, IPC_INVALID, "invalid request",
+		sizeof("invalid request"));
+	return (response);
+}
+
 t_ipc_message	supervisor_handle_request(const t_ipc_message *const request)
 {
 	t_supervisor_handler	handler;
 
 	if (IPC_EMPTY == request->header.type || IPC_COUNT <= request->header.type) {
-		return (ipc_message_init());
+		return (invalid_response());
 	}
 	handler = supervisor()->commands[request->header.type];
 	return (handler(request));
