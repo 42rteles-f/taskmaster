@@ -8,6 +8,7 @@
 typedef struct s_indexmap	t_indexmap;
 typedef struct s_indexmap	t_strmap;
 typedef t_vector_compare	t_indexmap_compare;
+typedef void			(*t_indexmap_iter)(void *, void *, size_t);
 
 typedef struct s_pair {
 	void	*first;
@@ -33,6 +34,7 @@ struct s_indexmap {
 	void*		(*key_at)(const t_indexmap*, size_t);
 	void*		(*value_at)(const t_indexmap*, size_t);
 	t_pair		(*at)(const t_indexmap*, size_t);
+	void		(*for_each)(t_indexmap*, t_indexmap_iter);
 	void		(*destroy)(t_indexmap*);
 } ;
 
@@ -59,6 +61,7 @@ int		indexmap_index_of(const t_indexmap *this, const void *key);
 void	*indexmap_key_at(const t_indexmap *this, size_t index);
 void	*indexmap_value_at(const t_indexmap *this, size_t index);
 t_pair	indexmap_at(const t_indexmap *this, size_t index);
+void	indexmap_for_each(t_indexmap *this, t_indexmap_iter function);
 
 t_strmap	*new_strmap(size_t value_size);
 

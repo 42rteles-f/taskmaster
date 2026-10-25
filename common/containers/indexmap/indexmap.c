@@ -99,6 +99,19 @@ t_pair	indexmap_at(const t_indexmap *this, size_t index)
 	return ((t_pair){this->key_at(this, index), this->value_at(this, index)});
 }
 
+void	indexmap_for_each(t_indexmap *this, t_indexmap_iter function)
+{
+	const size_t	size = this->keys.size;
+	size_t		index;
+
+	index = 0;
+	while (index < size)
+	{
+		function(this->key_at(this, index), this->value_at(this, index), index);
+		index++;
+	}
+}
+
 // #define call(ptr, member, ...) \
 //     ((ptr)->member(ptr, __VA_ARGS__))
 

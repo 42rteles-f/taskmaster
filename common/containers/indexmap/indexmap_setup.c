@@ -30,6 +30,7 @@ t_indexmap	init_indexmap(size_t key_size, size_t value_size)
 		.key_at = indexmap_key_at,
 		.value_at = indexmap_value_at,
 		.at = indexmap_at,
+		.for_each = indexmap_for_each,
 		.destroy = destroy_indexmap
 	});
 }

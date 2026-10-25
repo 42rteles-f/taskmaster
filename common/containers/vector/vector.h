@@ -53,6 +53,7 @@ struct s_vector {
 
 //vector_setup.c
 t_vector	init_vector(size_t size);
+t_uovector	init_uovector(size_t size);
 t_vector	*new_vector(size_t size);
 t_uovector	*new_uovector(size_t size);
 void		vector_expand(t_vector *this);
