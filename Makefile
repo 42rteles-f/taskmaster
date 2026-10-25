@@ -3,6 +3,7 @@ CFLAGS          := -Wall -Wextra -MMD -MP
 CPPFLAGS        := -Icli/src/headers \
 	-I daemon/src/headers \
 	-I common/ipc \
+	-I common/logger \
 	-I common/containers/vector \
 	-I common/containers/indexmap
 LDFLAGS         :=
@@ -16,19 +17,22 @@ CLI_BUILD       := $(BUILD_DIR)/cli
 DAEMON_BUILD    := $(BUILD_DIR)/daemon
 COMMON_BUILD    := $(BUILD_DIR)/common
 
-CLI_SRCS        := cli/src/terminal/commands.c \
-	cli/src/terminal/main.c \
-	cli/src/terminal/setup.c
+CLI_SRCS        := cli/src/main.c \
+	cli/src/terminal/commands.c \
+	cli/src/terminal/setup.c \
+	cli/src/terminal/split.c
 
-# pollfd.c and commands.c are not listed because the current daemon sources
-# include them directly from server and supervisor translation units.
-DAEMON_SRCS     := daemon/src/logger/logger.c \
-	daemon/src/main.c \
+# commands.c is not listed because supervisor.c includes it directly.
+DAEMON_SRCS     := daemon/src/main.c \
+	daemon/src/config/config.c \
 	daemon/src/parser/parser.c \
+	daemon/src/parser/yaml_utils.c \
 	daemon/src/program/program.c \
 	daemon/src/server/pollable.c \
+	daemon/src/server/pollfd.c \
 	daemon/src/server/server.c \
 	daemon/src/server/server_setup.c \
+	daemon/src/supervisor/commands.c \
 	daemon/src/supervisor/supervisor.c
 
 COMMON_SRCS     := common/containers/indexmap/indexmap.c \
@@ -38,7 +42,8 @@ COMMON_SRCS     := common/containers/indexmap/indexmap.c \
 	common/containers/vector/vector_mod.c \
 	common/containers/vector/vector_setup.c \
 	common/containers/vector/vector_str.c \
-	common/ipc/ipc.c
+	common/ipc/ipc.c \
+	common/logger/logger.c
 
 CLI_OBJS        := $(patsubst cli/%.c,$(CLI_BUILD)/%.o,$(CLI_SRCS))
 DAEMON_OBJS     := $(patsubst daemon/%.c,$(DAEMON_BUILD)/%.o,$(DAEMON_SRCS))
