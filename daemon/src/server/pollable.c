@@ -26,7 +26,7 @@ bool	pollable_read(t_pollable *const this)
 
 	ipc_message_reset(&this->message);
 	if (this->pollfd->revents & (POLLHUP | POLLERR) ||
-		0 != ipc_recv(this->pollfd->fd, &this->message.header, &this->message.payload))
+		0 != ipc_recv(this->pollfd->fd, &this->message))
 	{
 		close(this->pollfd->fd);
 		this->pollfd->fd = -1;
@@ -40,7 +40,7 @@ int	pollable_send(t_pollable *const this, t_ipc_message *const response)
 	if (response->header.type == IPC_EMPTY)
 		return (0);
 	if (this->pollfd == NULL
-		|| 0 != ipc_send(this->pollfd->fd, &response->header, response->payload))
+		|| 0 != ipc_send(this->pollfd->fd, response))
 	{
 		if (this->pollfd != NULL)
 		{

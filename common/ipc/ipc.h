@@ -31,8 +31,8 @@ typedef struct s_ipc_message
     void        *payload;
 } t_ipc_message;
 
-int ipc_send(int fd, const t_ipc_header *res, const void *payload);
-int ipc_recv(int fd, t_ipc_header *res, void **payload);
+int ipc_send(int fd, const t_ipc_message *message);
+int ipc_recv(int fd, t_ipc_message *message);
 int ipc_accept(const int server_fd);
 int	ipc_connect(void);
 

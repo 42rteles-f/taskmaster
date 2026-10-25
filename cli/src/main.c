@@ -35,6 +35,7 @@ static char	*join_arguments(int argc, char **argv)
 	input = malloc(length);
 	if (!input)
 		return (NULL);
+	input[0] = '\0';
 
 	for (size_t index = 0; index < argc; index++) {
 		if (index > 0) 

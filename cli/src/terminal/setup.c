@@ -39,7 +39,7 @@ static int	clear_interrupted_line(void)
 
 static bool	setup_signals(void)
 {
-	struct sigaction	action;
+	struct sigaction	action = {0};
 
 	action.sa_handler = control_c;
 	action.sa_flags = SA_RESTART;
@@ -79,7 +79,7 @@ void	input_reset(t_control *this)
 {
 	size_t	index;
 
-	free(this->input);
+	if (this->input) free(this->input);
 	this->input = NULL;
 	ipc_message_reset(&this->message);
 	index = 0;

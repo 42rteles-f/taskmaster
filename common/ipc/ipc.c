@@ -55,40 +55,41 @@ static int recv_all(int fd, void *buf, size_t len)
     return (0);
 }
 
-int ipc_send(int fd, const t_ipc_header *header, const void *payload)
+int ipc_send(int fd, const t_ipc_message *message)
 {
-	if (IPC_MAX_PAYLOAD < header->payload_len)
+	if (IPC_MAX_PAYLOAD < message->header.payload_len)
 		return (-1);
-    if (send_all(fd, header, sizeof(*header)) < 0)
+	if (send_all(fd, &message->header, sizeof(message->header)) < 0)
         return (-1);
 
-    if (header->payload_len > 0)
+	if (message->header.payload_len > 0)
     {
-        if (!payload || send_all(fd, payload, header->payload_len) < 0)
+		if (!message->payload || send_all(fd, message->payload,
+				message->header.payload_len) < 0)
             return (-1);
     }
 
     return (0);
 }
 
-int ipc_recv(int fd, t_ipc_header *header, void **payload)
+int ipc_recv(int fd, t_ipc_message *message)
 {
-	*payload = NULL;
-    if (recv_all(fd, header, sizeof(*header)) < 0)
+	message->payload = NULL;
+	if (recv_all(fd, &message->header, sizeof(message->header)) < 0)
         return (-1);
-	if (IPC_MAX_PAYLOAD < header->payload_len)
+	if (IPC_MAX_PAYLOAD < message->header.payload_len)
 		return (-1);
-    if (header->payload_len == 0)
+	if (message->header.payload_len == 0)
         return (0);
 
-    *payload = malloc(header->payload_len);
-    if (!*payload)
+	message->payload = malloc(message->header.payload_len);
+	if (!message->payload)
         return (-1);
 
-    if (recv_all(fd, *payload, header->payload_len) < 0)
+	if (recv_all(fd, message->payload, message->header.payload_len) < 0)
     {
-        free(*payload);
-        *payload = NULL;
+		free(message->payload);
+		message->payload = NULL;
         return (-1);
     }
 

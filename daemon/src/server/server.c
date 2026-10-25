@@ -31,8 +31,10 @@ void	server_clean_pollables(t_indexmap *const clients)
 	index = 0;
 	while (index < keys->size)
 	{
-		if (((t_pollfd*)keys->data)[index].fd < 0)
+		if (((t_pollfd*)keys->data)[index].fd < 0) {
+			printf("removed client: %i\n", ((t_pollfd*)keys->data)[index].fd);
 			clients->remove_at(clients, index);
+		}
 		else
 			index++;
 	}
@@ -85,7 +87,7 @@ void	server_handle_connections(void *const arg)
 	new_pollfd = pollfd_init(new_fd);
 	new_client = pollable_init();
 	new_client.handler = server_handle_pollable;
-	printf("new client added\n");
+	printf("new client added %i\n", new_pollfd.fd);
 	this->pollables->set(this->pollables, &new_pollfd, &new_client);
 }
 

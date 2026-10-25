@@ -5,16 +5,12 @@ t_ipc_message	supervisor_handle_request(const t_ipc_message *const request)
 {
 	t_supervisor_handler	handler;
 
-	printf("handling check\n");
-
 	if (IPC_EMPTY == request->header.type || IPC_COUNT <= request->header.type) {
 		return (ipc_message_init());
 	}
-	printf("handling pass\n");
 	handler = supervisor()->commands[request->header.type];
 	return (handler(request));
 }
-
 
 t_ipc_message	supervisor_handle_status(const t_ipc_message *req)
 {

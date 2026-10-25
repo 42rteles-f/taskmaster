@@ -63,6 +63,7 @@ static bool	validate_program(t_control *this)
 static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
 {
 	size_t	payload_len;
+	char	*payload_copy;
 
 	ipc_message_reset(&this->message);
 	payload_len = (payload) ? strlen(payload) + 1 : 0;
@@ -77,7 +78,7 @@ static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
 			.type = type,
 			.payload_len = payload_len
 		},
-		payload = payload
+		.payload = (payload) ? strdup(payload) : NULL
 	};
 	this->action = TERMINAL_REQUEST;
 	return (true);
@@ -99,8 +100,10 @@ static bool	start_command(t_control *this)
 
 static bool	stop_command(t_control *this)
 {
-	if (!validate_program(this))
+	if (!validate_program(this)) {
+		printf("not valid\n");
 		return (false);
+	}
 	return (setup_request(this, IPC_STOP, this->split[1]));
 }
 
@@ -200,8 +203,8 @@ static bool	execute_request(t_control *this)
 
 	response = ipc_message_init();
 	errno = 0;
-	if (ipc_send(this->socket, &this->message.header, this->message.payload) < 0
-		|| ipc_recv(this->socket, &response.header, &response.payload) < 0)
+	if (ipc_send(this->socket, &this->message) < 0
+		|| ipc_recv(this->socket, &response) < 0)
 	{
 		if (errno)
 			fprintf(stderr, "taskmasterctl: communication failed: %s\n",
