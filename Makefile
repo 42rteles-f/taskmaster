@@ -19,8 +19,9 @@ COMMON_BUILD    := $(BUILD_DIR)/common
 
 CLI_SRCS        := cli/src/main.c \
 	cli/src/terminal/commands.c \
-	cli/src/terminal/setup.c \
-	cli/src/terminal/split.c
+	cli/src/terminal/execution.c \
+	cli/src/terminal/split.c \
+	cli/src/terminal/terminal.c
 
 # commands.c is not listed because supervisor.c includes it directly.
 DAEMON_SRCS     := daemon/src/main.c \

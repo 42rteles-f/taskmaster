@@ -8,8 +8,8 @@
 
 typedef struct s_command_definition
 {
-	const char	*name;
-	t_exe		handler;
+	const char			*name;
+	t_command_builder	build;
 }	t_command_definition;
 
 static bool	status_command(t_control *this);
@@ -71,13 +71,13 @@ static bool	setup_request(t_control *this, t_ipc_type type, char *payload)
 		this->status = 2;
 		return (false);
 	}
-	if (!ipc_message_set(&this->message, type, payload, payload_len))
+	if (!ipc_message_set(&this->command.message, type, payload, payload_len))
 	{
 		fprintf(stderr, "taskmasterctl: cannot allocate request payload\n");
 		this->status = 1;
 		return (false);
 	}
-	this->action = TERMINAL_REQUEST;
+	this->command.execute = command_execute_request;
 	return (true);
 }
 
@@ -129,7 +129,7 @@ static bool	help_command(t_control *this)
 {
 	if (!validate_no_arguments(this))
 		return (false);
-	this->action = TERMINAL_HELP;
+	this->command.execute = command_execute_help;
 	return (true);
 }
 
@@ -137,7 +137,7 @@ static bool	exit_command(t_control *this)
 {
 	if (!validate_no_arguments(this))
 		return (false);
-	this->action = TERMINAL_EXIT;
+	this->command.execute = command_execute_exit;
 	return (true);
 }
 
@@ -159,80 +159,5 @@ bool	structure_commands(t_control *this)
 		&& strcmp(this->split[0], g_commands[index].name) != 0
 	) index++;
 
-	return (g_commands[index].handler(this));
-}
-
-static void	print_help(void)
-{
-	printf(
-		"Commands:\n"
-		"  status             show all configured programs\n"
-		"  start <program>    start a program\n"
-		"  stop <program>     stop a program\n"
-		"  restart <program>  restart a program\n"
-		"  reload             reload the configuration\n"
-		"  shutdown           stop Taskmaster\n"
-		"  exit | quit        close this client\n"
-	);
-	fflush(stdout);
-}
-
-static void	print_response(const t_ipc_message *response)
-{
-	size_t	length;
-	char	*payload;
-
-	length = response->header.payload_len;
-	payload = response->payload;
-	if (length > 0 && payload[length - 1] == '\0')
-		length--;
-	if (length == 0)
-		return ;
-	fwrite(payload, 1, length, stdout);
-	if (payload[length - 1] != '\n')
-		putchar('\n');
-	fflush(stdout);
-}
-
-static bool	execute_request(t_control *this)
-{
-	t_ipc_message	response;
-
-	response = ipc_message_init();
-	errno = 0;
-	if (ipc_send(this->socket, &this->message) < 0
-		|| ipc_recv(this->socket, &response) < 0)
-	{
-		if (errno)
-			fprintf(stderr, "taskmasterctl: communication failed: %s\n",
-				strerror(errno));
-		else
-			fprintf(stderr,
-				"taskmasterctl: communication failed: connection closed\n");
-		ipc_message_clear(&response);
-		this->status = 1;
-		this->running = false;
-		return (false);
-	}
-	print_response(&response);
-	ipc_message_clear(&response);
-	this->status = (response.header.type == IPC_INVALID);
-	return (!this->status);
-}
-
-void	run_input(t_control *this)
-{
-	if (this->action == TERMINAL_HELP)
-	{
-		print_help();
-		this->status = 0;
-	}
-	else if (this->action == TERMINAL_EXIT)
-		this->running = false;
-	else
-	{
-		execute_request(this);
-		if (this->message.header.type == IPC_SHUTDOWN)
-			this->running = false;
-	}
+	return (g_commands[index].build(this));
 }

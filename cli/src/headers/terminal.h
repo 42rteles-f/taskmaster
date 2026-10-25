@@ -7,14 +7,14 @@
 # define TERMINAL_PROMPT "taskmaster> "
 
 typedef struct s_control	t_control;
-typedef bool				(*t_exe)(t_control *this);
+typedef struct s_command	t_command;
 
-typedef enum e_terminal_action
+struct s_command
 {
-	TERMINAL_REQUEST,
-	TERMINAL_HELP,
-	TERMINAL_EXIT
-}	t_terminal_action;
+	t_ipc_message	message;
+	t_control		*control;
+	void			(*execute)(t_command *this);
+};
 
 struct s_control
 {
@@ -23,12 +23,11 @@ struct s_control
 	int					socket;
 	int					status;
 	bool				running;
-	t_ipc_message		message;
-	t_terminal_action	action;
+	t_command			command;
 };
 
 t_control	*terminal(void);
-bool		terminal_setup(t_control *this, int argc);
+bool		terminal_init(t_control *this, int argc);
 void		control_d(t_control *this);
 bool		normalize_input(t_control *this);
 bool		structure_commands(t_control *this);

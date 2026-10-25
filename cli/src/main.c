@@ -56,7 +56,7 @@ int	main(int argc, char **argv)
 {
 	t_control	*const this = terminal();
 
-	if (!terminal_setup(this, argc))
+	if (!terminal_init(this, argc))
 	{
 		terminal_destroy(this);
 		return (this->status);
@@ -67,6 +67,7 @@ int	main(int argc, char **argv)
 		printf("here\n");
 		this->input = join_arguments(argc - 1, &(argv[1]));
 		process_input(this);
+		terminal_destroy(this);
 		return (this->status);
 	}
 

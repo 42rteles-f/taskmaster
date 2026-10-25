@@ -20,6 +20,21 @@ static int	getwords(char const *s);
 static int	fill_list(char const *s, char **list);
 static char	*checkmalloc(int size, int members, char **list);
 
+void	*free_split(char **split)
+{
+	int	i;
+
+	if (split)
+	{
+		i = 0;
+		while (split[i])
+			free(split[i++]);
+		free(split);
+		split = 0;
+	}
+	return (NULL);
+}
+
 char	**ft_split_space(const char *string)
 {
 	int		foundwords;

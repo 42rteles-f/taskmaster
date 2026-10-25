@@ -1,4 +1,5 @@
 #include <terminal.h>
+#include "terminal_internal.h"
 
 #include <errno.h>
 #include <readline/history.h>
@@ -11,6 +12,15 @@
 
 static volatile sig_atomic_t	g_interrupt;
 
+void	input_reset(t_control *this)
+{
+	if (this->input) free(this->input);
+	this->input = NULL;
+	ipc_message_clear(&this->command.message);
+	free_split(this->split);
+	this->split = NULL;
+	this->command.execute = NULL;
+}
 
 void	control_d(t_control *get)
 {
@@ -54,12 +64,26 @@ static bool	setup_signals(void)
 	return (true);
 }
 
-bool	terminal_setup(t_control *this, int argc)
+void	terminal_destroy(t_control *this)
+{
+	input_reset(this);
+	if (this->socket >= 0) close(this->socket);
+	this->socket = -1;
+	rl_event_hook = NULL;
+	this->running = false;
+	rl_clear_history();
+}
+
+bool	terminal_init(t_control *this, int argc)
 {
 	*this = (t_control){
 		.socket = ipc_connect(),
 		.status = EXIT_SUCCESS,
 		.running = true
+	};
+	this->command = (t_command){
+		.message = ipc_message_init(),
+		.control = this
 	};
 	if (this->socket < 0)
 		return (false);
@@ -73,29 +97,4 @@ bool	terminal_setup(t_control *this, int argc)
 		return (false);
 	}
 	return (true);
-}
-
-void	input_reset(t_control *this)
-{
-	size_t	index;
-
-	if (this->input) free(this->input);
-	this->input = NULL;
-	ipc_message_clear(&this->message);
-	index = 0;
-	while (this->split && this->split[index])
-		free(this->split[index++]);
-	free(this->split);
-	this->split = NULL;
-	this->action = TERMINAL_REQUEST;
-}
-
-void	terminal_destroy(t_control *this)
-{
-	input_reset(this);
-	if (this->socket >= 0) close(this->socket);
-	this->socket = -1;
-	rl_event_hook = NULL;
-	this->running = false;
-	rl_clear_history();
 }
