@@ -64,7 +64,6 @@ int	main(int argc, char **argv)
 
 	if (argc > 1)
 	{
-		printf("here\n");
 		this->input = join_arguments(argc - 1, &(argv[1]));
 		process_input(this);
 		terminal_destroy(this);

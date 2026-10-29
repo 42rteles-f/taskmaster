@@ -70,5 +70,5 @@ const char	*yaml_value_by_key(yaml_document_t *document,
 	value = yaml_node_by_key(document, mapping, wanted);
 	if (value == NULL || value->type != YAML_SCALAR_NODE)
 		return (NULL);
-	return ((const char *)value->data.scalar.value);
+	return (value->data.scalar.value);
 }

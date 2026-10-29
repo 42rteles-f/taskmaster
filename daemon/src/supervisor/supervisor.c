@@ -8,42 +8,16 @@ t_supervisor	*supervisor(void)
 	static t_supervisor	this = {
 		.init = supervisor_init,
 		.handle_request = supervisor_handle_request,
+		.sync = supervisor_sync,
 		.destroy = supervisor_destroy
-		// .destroy = supervisor_destroy,
 	};
 
 	return (&this);
 }
 
-int	program_name_compare(const void *element, const void *name, size_t size)
-{
-	(void)size;
-	return (strcmp(((t_program*)element)->name, name));
-}
-
-void	program_destroy(void *arg)
-{
-	t_program	*const this = arg;
-	free(this->name);
-	//kill process if alive
-}
-
-void	call_program_execute(void *element, int)
-{
-	((t_program*)element)->execute(element);
-}
-
-void	set_program_unrevised(void *element, size_t)
-{
-	((t_program*)element)->revised = false;
-}
-
 bool	supervisor_init(void)
 {
 	t_supervisor	*this = supervisor();
-
-	if (this->programs)
-		delete_vector(this->programs);
 
 	this->programs = new_uovector(sizeof(t_program));
 	vector_custom(this->programs, NULL, program_name_compare, program_destroy);
@@ -56,11 +30,93 @@ bool	supervisor_init(void)
 	this->commands[IPC_SHUTDOWN] = supervisor_handle_shutdown;
 
 	//start sighandlers
-	//start current programs loaded
 }
 
-bool	supervisor_update(void)
+void	supervisor_destroy(void)
 {
+	t_supervisor	*this = supervisor();
+
+	delete_vector(this->programs);
+}
+
+void	call_program_execute(void *element, int)
+{
+	((t_program*)element)->execute(element);
+}
+
+void	set_program_unrevised(void *element, size_t)
+{
+	((t_program*)element)->revised = false;
+}
+
+bool	supervisor_set_signals(void)
+{
+	t_supervisor	*this = supervisor();
+	
+}
+
+static void	supervisor_remove_unrevised(t_supervisor *this)
+{
+	size_t		index;
+	t_program	*program;
+
+	index = 0;
+	while (index < this->programs->size)
+	{
+		program = this->programs->at(this->programs, index);
+		if (false == program->revised) {
+			printf("removing program: %s\n", program->name);
+			this->programs->remove_at(this->programs, index);
+		}
+		else
+			index++;
+	}
+}
+
+void	supervisor_update_program(void	*config, size_t size)
+{
+	t_uovector *const	_programs = supervisor()->programs;
+	t_program			*program;
+
+	(void)size;
+	program = _programs->find(_programs, ((t_config*)config)->name);
+	if (!program) {
+		program = _programs->emplace(_programs);
+		*program = program_init();
+	}
+
+	program->update(config);
+	program->revised = true;
+}
+
+bool	supervisor_sync(t_uovector *configs)
+{
+	t_supervisor *const this = supervisor();
+
+	if (!configs) return (false);
+
+	this->programs->for_each(this->programs, set_program_unrevised);
+	configs->for_each(configs, supervisor_update_program);
+	supervisor_remove_unrevised(this);
+}
+
+
+	// for (size_t index = 0; index < config_vec->size; index++)
+	// {
+	// 	config = config_vec->at(config_vec, index);
+	// 	program = this->programs->find(this->programs, config->name);
+	// 	if (program) {
+	// 		program->update(config);
+	// 		program->revised = true;
+	// 	}
+	// 	else {
+	// 		this->new_program(config);
+	// 	}
+	// }
+
+
+	// bool	supervisor_update(void)
+// {
 	// t_supervisor	*const this = supervisor();
 	// t_uovector		*new_data;
 	// t_program		*new_prog;
@@ -91,26 +147,6 @@ bool	supervisor_update(void)
 
 	// delete_vector(new_data);
 	// supervisor_execute(this);
-}
-
-// supervisor_update_programs(t_uovector)
-
-bool	supervisor_set_signals(void)
-{
-	t_supervisor	*this = supervisor();
-	
-}
-
-bool	supervisor_execute(t_supervisor *this, t_uovector programs)
-{
-	
-}
-
-void	supervisor_destroy(void)
-{
-	t_supervisor	*this = supervisor();
-
-	delete_vector(this->programs);
-}
+// }
 
 //programs are 

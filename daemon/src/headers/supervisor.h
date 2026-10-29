@@ -12,23 +12,25 @@ typedef t_ipc_message	(*t_supervisor_handler)(const t_ipc_message *);
 
 typedef struct {
 	volatile sig_atomic_t	signal;
-	t_vector				*programs;
+	t_uovector				*programs;
 	t_supervisor_handler	commands[IPC_COUNT];
 
-	bool	(*init)();
+	bool	(*init)(void);
 	bool	(*start)();
 	bool	(*update)();
-	bool	(*sync)();
-	void	(*shutdown)();	
-	void	(*destroy)();
+	bool	(*sync)(t_uovector *);
+	bool	(*new_program)(t_config *);
+	void	(*shutdown)(void);
+	void	(*destroy)(void);
 
 	t_ipc_message	(*handle_request)(t_ipc_message *const);
 }	t_supervisor;
  
-bool	supervisor_init(void);
-bool	supervisor_update(void);
-bool	supervisor_set_signal(void);
-void	supervisor_destroy(void);
+bool			supervisor_init(void);
+bool			supervisor_update(void);
+bool			supervisor_sync(t_uovector *configs);
+bool			supervisor_set_signal(void);
+void			supervisor_destroy(void);
 t_supervisor	*supervisor(void);
 
 #endif
