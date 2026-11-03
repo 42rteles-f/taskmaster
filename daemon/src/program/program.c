@@ -58,7 +58,7 @@ t_program	program_init(void)
 	this = (t_program) {
 		.processes = init_uovector(sizeof(t_process)),
 		.config = config_init(),
-		.update = program_update,
+		.sync = program_sync,
 		.destroy = program_destroy,
 	};
 	vector_custom(&this.processes, NULL, NULL, process_destroy);
@@ -74,7 +74,7 @@ void	program_destroy(void *arg)
 	*this = (t_program){};
 }
 
-static void	program_update_processes(t_program *this)
+static void	program_sync_processes(t_program *this)
 {
 	t_process	*process;
 
@@ -91,13 +91,13 @@ static void	program_update_processes(t_program *this)
 	}
 }
 
-void	program_update(t_program *this, t_config *new_config)
+void	program_sync(t_program *this, t_config *new_config)
 {
 	if (process_should_restart(&this->config, new_config))
 		this->processes.clear(&this->processes);
 
 	config_move(&this->config, new_config);
-	program_update_processes(this);
+	program_sync_processes(this);
 }
 
 int	program_cmp_str_name(const void *element, const void *name, size_t size)

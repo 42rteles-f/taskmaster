@@ -37,7 +37,7 @@ bool	server_init(t_server_handler handler)
 	return (true);
 }
 
-bool	server_register_reaction(int fd,
+bool	server_register_event(int fd,
 								 void *context,
 								 void (*handler)(t_pollfd *pollfd, void *context))
 {
@@ -57,7 +57,7 @@ bool	server_register_reaction(int fd,
 									 &value));
 }
 
-bool	server_unregister_reaction(int fd)
+bool	server_unregister_event(int fd)
 {
 	t_server	*const this = server();
 	t_pollfd	*found;
@@ -89,7 +89,7 @@ bool	server_open_connections(t_server *const this)
 		goto error;
 	}
 
-	server_register_reaction(this->socket, this, server_handle_connections);
+	server_register_event(this->socket, this, server_handle_connections);
 	this->online = true;
 
     return (true);

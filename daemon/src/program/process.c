@@ -26,7 +26,13 @@ void	process_destroy(void *element)
 	t_process	*process;
 
 	process = element;
+	process_stop(process);
 	*process = (t_process){.pid = -1};
+}
+
+void	process_stop(t_process *this)
+{
+	if (0 > this->pid) return ;
 }
 
 static bool	redirect_output(const char *path, int target_fd)
@@ -67,12 +73,12 @@ static void	reset_child_signals(void)
 
 	action = (struct sigaction){.sa_handler = SIG_DFL};
 	sigemptyset(&action.sa_mask);
+	sigemptyset(&empty);
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
 	sigaction(SIGQUIT, &action, NULL);
 	sigaction(SIGHUP, &action, NULL);
 	sigaction(SIGCHLD, &action, NULL);
-	sigemptyset(&empty);
 	sigprocmask(SIG_SETMASK, &empty, NULL);
 }
 
@@ -82,9 +88,9 @@ static void	child_execute(const t_config *config)
 	umask(config->umask);
 	if (config->workingdir && chdir(config->workingdir) < 0)
 		_exit(126);
-	if (!redirect_output(config->stdout_path, STDOUT_FILENO)
-		|| !redirect_output(config->stderr_path, STDERR_FILENO)
-		|| !apply_environment(&config->env))
+	if (!redirect_output(config->stdout_path, STDOUT_FILENO) ||
+		!redirect_output(config->stderr_path, STDERR_FILENO) ||
+		!apply_environment(&config->env))
 	{
 		_exit(126);
 	}
@@ -94,9 +100,6 @@ static void	child_execute(const t_config *config)
 
 bool	process_start(t_process *process, const t_config *config)
 {
-	if (!process || !config || !config->cmd)
-		return (false);
-
 	process->pid = fork();
 	if (process->pid < 0) return (false);
 

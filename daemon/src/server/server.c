@@ -19,8 +19,8 @@ t_server	*server(void)
 		.start = server_start,
 		.stop = server_stop,
 		.destroy = server_destroy,
-		.register_reaction = server_register_reaction,
-		.unregister_reaction = server_unregister_reaction,
+		.register_event = server_register_event,
+		.unregister_event = server_unregister_event,
 	};
 
 	return (&this);
@@ -113,7 +113,7 @@ void	server_handle_connections(t_pollfd *pollfd, void *context)
 		return ;
 	}
 	printf("new client added %i\n", new_fd);
-	server_register_reaction(new_fd,
+	server_register_event(new_fd,
 							 this,
 							 server_handle_ipc_client);
 }

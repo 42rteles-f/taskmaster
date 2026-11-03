@@ -12,15 +12,17 @@ int	main(int argc, char **argv)
 	configs = parse_yaml_file(config_path);
 
 	supervisor()->init();
-	// supervisor()->sync(configs);
+	supervisor()->sync(configs);
 	server()->init(supervisor_handle_request);
-	server()->register_reaction(
-		supervisor()->signal_pipe[0],
-		supervisor(),
-		supervisor_handle_pipe
-	);
+
+	server()->register_event(supervisor()->signal_pipe[0], supervisor(), supervisor_handle_pipe);
+	server()->register_event(supervisor()->timer_fd, supervisor(), supervisor_handle_timer);
+
 	server()->start();
-	server()->unregister_reaction(supervisor()->signal_pipe[0]);
+
+	server()->unregister_event(supervisor()->signal_pipe[0]);
+	server()->unregister_event(supervisor()->timer_fd);
+
 	server()->destroy();
 	supervisor()->destroy();
 }

@@ -3,6 +3,7 @@
 
 // Custom Headers
 #include <ipc.h>
+#include <supervisor.h>
 
 // Standard Headers
 #include <stdbool.h>
@@ -16,5 +17,6 @@ t_ipc_message	supervisor_handle_reload(const t_ipc_message *req);
 t_ipc_message	supervisor_handle_shutdown(const t_ipc_message *req);
 bool			supervisor_set_signals(void);
 bool			supervisor_setup_pipe(void);
+bool			supervisor_activate_timer(t_supervisor *this);
 
 #endif

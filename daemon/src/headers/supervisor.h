@@ -16,6 +16,7 @@ typedef t_ipc_message	(*t_supervisor_handler)(const t_ipc_message *);
 
 typedef struct {
 	int						signal_pipe[2];
+	int						timer_fd;
 	t_uovector				*programs;
 	t_supervisor_handler	commands[IPC_COUNT];
 
@@ -35,6 +36,7 @@ bool			supervisor_init(void);
 bool			supervisor_sync(t_uovector *configs);
 void			supervisor_destroy(void);
 void			supervisor_handle_pipe(struct pollfd *pollfd, void *context);
+void			supervisor_handle_timer(struct pollfd *pollfd, void *context);
 t_ipc_message	supervisor_handle_request(const t_ipc_message *const request);
 
 t_supervisor	*supervisor(void);

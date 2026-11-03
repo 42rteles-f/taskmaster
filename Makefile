@@ -34,7 +34,8 @@ DAEMON_SRCS     := daemon/src/main.c \
 	daemon/src/server/server_setup.c \
 	daemon/src/supervisor/commands.c \
 	daemon/src/supervisor/supervisor.c \
-	daemon/src/supervisor/supervisor_signals.c
+	daemon/src/supervisor/supervisor_signals.c \
+	daemon/src/supervisor/supervisor_timer.c
 
 COMMON_SRCS     := common/containers/indexmap/indexmap.c \
 	common/containers/indexmap/indexmap_setup.c \
