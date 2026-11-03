@@ -23,7 +23,7 @@ static void	catch_input(t_control *this)
 		add_history(this->input);
 }
 
-static char	*join_arguments(int argc, char **argv)
+static char	*join_arguments(size_t argc, char **argv)
 {
 	size_t	length;
 	char	*input;

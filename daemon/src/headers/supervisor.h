@@ -1,17 +1,21 @@
 #ifndef SUPERVISOR_H
 # define SUPERVISOR_H
 
-# include <stdbool.h>
-# include <indexmap.h>
+// Custom Headers
+# include <config.h>
 # include <ipc.h>
-# include <signal.h>
+# include <vector.h>
+
+// Standard Headers
+# include <stdbool.h>
+# include <poll.h>
 
 #define SUPERVISOR_CONFIG_FILE	"taskmaster.yaml"
 
 typedef t_ipc_message	(*t_supervisor_handler)(const t_ipc_message *);
 
 typedef struct {
-	volatile sig_atomic_t	signal;
+	int						signal_pipe[2];
 	t_uovector				*programs;
 	t_supervisor_handler	commands[IPC_COUNT];
 
@@ -23,14 +27,16 @@ typedef struct {
 	void	(*shutdown)(void);
 	void	(*destroy)(void);
 
-	t_ipc_message	(*handle_request)(t_ipc_message *const);
+	t_ipc_message	(*handle_request)(const t_ipc_message *const);
 }	t_supervisor;
- 
+
 bool			supervisor_init(void);
-bool			supervisor_update(void);
+// bool			supervisor_update(void);
 bool			supervisor_sync(t_uovector *configs);
-bool			supervisor_set_signal(void);
 void			supervisor_destroy(void);
+void			supervisor_handle_pipe(struct pollfd *pollfd, void *context);
+t_ipc_message	supervisor_handle_request(const t_ipc_message *const request);
+
 t_supervisor	*supervisor(void);
 
 #endif

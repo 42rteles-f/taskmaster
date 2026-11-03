@@ -1,4 +1,9 @@
+// Custom Headers
 #include "indexmap.h"
+
+// Standard Headers
+#include <stddef.h>
+#include <stdlib.h>
 
 t_strmap	init_strmap(size_t value_size)
 {

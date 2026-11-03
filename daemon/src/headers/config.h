@@ -1,9 +1,13 @@
 #ifndef CONFIG_H
 # define CONFIG_H
 
+// Custom Headers
+# include <indexmap.h>
+
+// Standard Headers
 # include <stdbool.h>
 # include <stddef.h>
-# include <indexmap.h>
+# include <sys/types.h>
 
 # define CONFIG_EXIT_COUNT 256
 
@@ -40,6 +44,7 @@ typedef struct s_config {
 
 void		config_destroy(void *element);
 t_config	config_init(void);
+void		config_move(t_config *dest, t_config *src);
 void		copy_string_from_scalar(const char *source, char **destination);
 void		copy_unsigned_from_scalar(const char *source,
 										  unsigned int *destination);
@@ -50,6 +55,7 @@ void		copy_autorestart_from_scalar(const char *source,
 											 t_autorestart *destination);
 void		copy_signal_from_scalar(const char *source, int *destination);
 bool		config_validate(t_config *cfg);
+int			config_compare_name(const void *first, const void *second, size_t size);
 
 
 #endif

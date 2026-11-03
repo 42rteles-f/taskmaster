@@ -1,4 +1,10 @@
+// Custom Headers
 #include "vector.h"
+
+// Standard Headers
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 void	*vector_custom_strcpy(void *dest, const void *src, size_t)
 {

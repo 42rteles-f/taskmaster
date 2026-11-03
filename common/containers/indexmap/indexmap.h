@@ -1,13 +1,15 @@
 #ifndef INDEXMAP_H
 # define INDEXMAP_H
 
+// Custom Headers
 # include "vector.h"
+
+// Standard Headers
 # include <stdbool.h>
-# include <stdarg.h>
+# include <stddef.h>
 
 typedef struct s_indexmap	t_indexmap;
 typedef struct s_indexmap	t_strmap;
-typedef t_vector_compare	t_indexmap_compare;
 typedef void			(*t_indexmap_iter)(void *, void *, size_t);
 
 typedef struct s_pair {
@@ -19,11 +21,14 @@ struct s_indexmap {
 	t_uovector	keys;
 	t_uovector	values;
 
-	void		(*set_compare)(t_indexmap*, t_indexmap_compare);
-	void		(*custom_keys)(t_indexmap*, t_vector_copy, t_vector_compare,
-					t_vector_destroy_element);
-	void		(*custom_values)(t_indexmap*, t_vector_copy, t_vector_compare,
-					t_vector_destroy_element);
+	void		(*set_compare)(t_indexmap*,
+					int(*)(const void*, const void*, size_t));
+	void		(*custom_keys)(t_indexmap*,
+					void*(*)(void*, const void*, size_t),
+					int(*)(const void*, const void*, size_t), void(*)(void*));
+	void		(*custom_values)(t_indexmap*,
+					void*(*)(void*, const void*, size_t),
+					int(*)(const void*, const void*, size_t), void(*)(void*));
 	void*		(*set)(t_indexmap*, void*, void*);
 	void*		(*get)(t_indexmap*, void*);
 	void*		(*emplace)(t_indexmap*, void*);
@@ -50,11 +55,16 @@ void	*indexmap_get(t_indexmap *this, void *key);
 bool	indexmap_remove(t_indexmap *this, void *key);
 void	*indexmap_emplace(t_indexmap *this, void *key);
 void	*indexmap_set(t_indexmap *this, void *key, void *value);
-void	indexmap_set_compare(t_indexmap *this, t_indexmap_compare compare);
-void	indexmap_custom_keys(t_indexmap *this, t_vector_copy copy,
-			t_vector_compare compare, t_vector_destroy_element destroy);
-void	indexmap_custom_values(t_indexmap *this, t_vector_copy copy,
-			t_vector_compare compare, t_vector_destroy_element destroy);
+void	indexmap_set_compare(t_indexmap *this,
+			int (*compare)(const void*, const void*, size_t));
+void	indexmap_custom_keys(t_indexmap *this,
+			void *(*copy)(void*, const void*, size_t),
+			int (*compare)(const void*, const void*, size_t),
+			void (*destroy)(void*));
+void	indexmap_custom_values(t_indexmap *this,
+			void *(*copy)(void*, const void*, size_t),
+			int (*compare)(const void*, const void*, size_t),
+			void (*destroy)(void*));
 bool	indexmap_remove_at(t_indexmap *this, size_t index);
 bool	indexmap_has(const t_indexmap *this, const void *key);
 int		indexmap_index_of(const t_indexmap *this, const void *key);

@@ -1,7 +1,15 @@
+// Custom Headers
 #include "vector.h"
 
-void	vector_custom(t_vector *this, t_vector_copy copy,
-		t_vector_compare compare, t_vector_destroy_element destroy)
+// Standard Headers
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+void	vector_custom(t_vector *this,
+		void *(*copy)(void*, const void*, size_t),
+		int (*compare)(const void*, const void*, size_t),
+		void (*destroy)(void*))
 {
 	if (copy)
 		this->copy = copy;
@@ -28,6 +36,8 @@ void	vector_destroy(t_vector *this)
 
 void	delete_vector(t_vector *this)
 {
+	if (!this) return;
+
 	this->destroy(this);
 	free(this);
 }
@@ -67,6 +77,8 @@ t_vector	init_vector(size_t size)
 		.find_with = vector_search_with,
 		.at = vector_at,
 		.for_each = vector_for_each,
+		.for_each_ctx = vector_for_each_ctx,
+		.clear = vector_clear,
 		.destroy = vector_destroy,
 		.end = vector_end,
 		.push_batch = vector_push_batch,

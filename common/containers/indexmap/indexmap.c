@@ -1,23 +1,33 @@
+// Custom Headers
 #include "indexmap.h"
+
+// Standard Headers
+#include <stdbool.h>
+#include <stddef.h>
 
 int	indexmap_index_of(const t_indexmap *this, const void *key)
 {
 	return (vector_get_index(&this->keys, key));
 }
 
-void	indexmap_set_compare(t_indexmap *this, t_indexmap_compare compare)
+void	indexmap_set_compare(t_indexmap *this,
+		int (*compare)(const void*, const void*, size_t))
 {
 	this->keys.compare = compare;
 }
 
-void	indexmap_custom_keys(t_indexmap *this, t_vector_copy copy,
-		t_vector_compare compare, t_vector_destroy_element destroy)
+void	indexmap_custom_keys(t_indexmap *this,
+		void *(*copy)(void*, const void*, size_t),
+		int (*compare)(const void*, const void*, size_t),
+		void (*destroy)(void*))
 {
 	vector_custom(&this->keys, copy, compare, destroy);
 }
 
-void	indexmap_custom_values(t_indexmap *this, t_vector_copy copy,
-		t_vector_compare compare, t_vector_destroy_element destroy)
+void	indexmap_custom_values(t_indexmap *this,
+		void *(*copy)(void*, const void*, size_t),
+		int (*compare)(const void*, const void*, size_t),
+		void (*destroy)(void*))
 {
 	vector_custom(&this->values, copy, compare, destroy);
 }
@@ -112,7 +122,7 @@ void	indexmap_for_each(t_indexmap *this, t_indexmap_iter function)
 	}
 }
 
-// #define call(ptr, member, ...) \
+// #define call(ptr, member, ...) 
 //     ((ptr)->member(ptr, __VA_ARGS__))
 
 // int main()  {

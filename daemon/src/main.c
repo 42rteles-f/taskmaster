@@ -1,3 +1,4 @@
+// Custom Headers
 #include <supervisor.h>
 #include <server.h>
 #include <parser.h>
@@ -11,9 +12,15 @@ int	main(int argc, char **argv)
 	configs = parse_yaml_file(config_path);
 
 	supervisor()->init();
-	supervisor()->sync(configs);
-	server()->init();
+	// supervisor()->sync(configs);
+	server()->init(supervisor_handle_request);
+	server()->register_reaction(
+		supervisor()->signal_pipe[0],
+		supervisor(),
+		supervisor_handle_pipe
+	);
 	server()->start();
+	server()->unregister_reaction(supervisor()->signal_pipe[0]);
 	server()->destroy();
 	supervisor()->destroy();
 }

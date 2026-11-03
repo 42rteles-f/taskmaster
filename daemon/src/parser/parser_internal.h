@@ -1,6 +1,7 @@
 #ifndef PARSER_INTERNAL_H
 # define PARSER_INTERNAL_H
 
+// Standard Headers
 # include <stdbool.h>
 # include <stdio.h>
 # include <yaml.h>
@@ -17,8 +18,12 @@ bool		yaml_state_init(t_yaml_state *const this, const char *path);
 void		yaml_state_destroy(t_yaml_state *this);
 
 yaml_node_t	*yaml_node_by_key(yaml_document_t *document,
-				yaml_node_t *mapping, const char *wanted);
+							  yaml_node_t *mapping,
+							  const char *wanted);
 const char	*yaml_value_by_key(yaml_document_t *document,
-				yaml_node_t *mapping, const char *wanted);
+							   yaml_node_t *mapping,
+							   const char *wanted);
+bool		mapping_has_duplicate_keys(yaml_document_t *document,
+									   yaml_node_t *mapping);
 
 #endif

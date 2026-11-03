@@ -1,13 +1,15 @@
 // Custom Headers
-#include <supervisor.h>
 #include <server.h>
-#include "pollable.h"
+#include <indexmap.h>
+#include <ipc.h>
 #include "server_internal.h"
+
 // Standard Headers
-#include <sys/socket.h>
-#include <stddef.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <poll.h>
+#include <stddef.h>
+#include <stdio.h>
 
 t_server	*server(void)
 {
@@ -15,7 +17,10 @@ t_server	*server(void)
 		.socket = -1,
 		.init = server_init,
 		.start = server_start,
-		.destroy = server_destroy
+		.stop = server_stop,
+		.destroy = server_destroy,
+		.register_reaction = server_register_reaction,
+		.unregister_reaction = server_unregister_reaction,
 	};
 
 	return (&this);
@@ -23,86 +28,94 @@ t_server	*server(void)
 
 //unorderd vector means last member is copied into removed index
 //upon removal, we need to check the same index again.
-void	server_clean_pollables(t_indexmap *const clients)
+void	server_clean_subscriptions(t_indexmap *const subscriptions)
 {
 	size_t				index;
-	t_uovector	*const	keys = &clients->keys;
+	t_uovector	*const	keys = &subscriptions->keys;
 
 	index = 0;
 	while (index < keys->size)
 	{
 		if (((t_pollfd*)keys->data)[index].fd < 0) {
 			printf("removed client: %i\n", ((t_pollfd*)keys->data)[index].fd);
-			clients->remove_at(clients, index);
+			subscriptions->remove_at(subscriptions, index);
 		}
 		else
 			index++;
 	}
 }
 
-void	call_pollable_handler(void *key, void *value, size_t index)
+void	call_event_handler(void *key, void *value, size_t index)
 {
-	t_pollable *const	pollable = value;
+	t_pollfd *const		pollfd = key;
+	t_poll_event *const event = value;
 
 	(void)index;
-	pollable->pollfd = key;
-	printf("here call pollable %i\n", pollable->pollfd->fd);
-	pollable->handler(pollable);
+	printf("call event %i\n", pollfd->fd);
+	event->handler(pollfd, event->context);
 }
 
-static inline bool	server_has_connection_request(t_server *this)
+static bool	server_ipc_read(t_pollfd *pollfd, t_ipc_message *request)
 {
-	t_pollfd	*const socket = this->pollables->keys.find(
-		&this->pollables->keys, &(t_pollfd){.fd = this->socket});
+	if (!(pollfd->revents & POLLIN))
+		return (false);
 
-	return (socket != NULL && (socket->revents & POLLIN));
+	*request = ipc_message_init();
+	if (pollfd->revents & (POLLHUP | POLLERR) ||
+		ipc_recv(pollfd->fd, request) != 0)
+	{
+		pollfd_destroy(pollfd);
+		return (false);
+	}
+	return (true);
 }
 
-void	server_handle_pipe_trigger(void *const arg)
+static int	server_ipc_send(t_pollfd *pollfd,
+							const t_ipc_message *response)
 {
-	t_pollable *const	pollable = arg;
-
-	// if (!pollable_read(pollable))
-
+	if (response->header.type == IPC_EMPTY)
+		return (0);
+	if (ipc_send(pollfd->fd, response) != 0)
+	{
+		pollfd_destroy(pollfd);
+		return (-1);
+	}
+	return (0);
 }
 
-void	server_handle_connections(void *const arg)
+static void	server_handle_ipc_client(t_pollfd *pollfd, void *context)
 {
-	t_server *const	this = ((t_pollable*)arg)->context;
-	t_pollable		new_client;
-	t_pollfd		new_pollfd;
+	t_server			*this = context;
+	t_ipc_message		request;
+	t_ipc_message		response;
+
+	if (!server_ipc_read(pollfd, &request))
+		return ;
+
+	printf("ipc message\n");
+	response = this->request_handler(&request);
+	server_ipc_send(pollfd, &response);
+	ipc_message_clear(&request);
+	ipc_message_clear(&response);
+}
+
+void	server_handle_connections(t_pollfd *pollfd, void *context)
+{
+	t_server *const	this = context;
 	int				new_fd;
 
-	TRACE;
-	HERE;
-	if (!server_has_connection_request(this))
+	if (!(pollfd->revents & POLLIN))
 		return ;
-	THERE;
 	new_fd = ipc_accept(this->socket);
 	if (new_fd < 0)
 	{
 		ERROR_SEND;
 		return ;
 	}
-	new_pollfd = pollfd_init(new_fd);
-	new_client = pollable_init();
-	new_client.handler = server_handle_pollable;
-	printf("new client added %i\n", new_pollfd.fd);
-	this->pollables->set(this->pollables, &new_pollfd, &new_client);
-}
-
-void	server_handle_pollable(void *const arg)
-{
-	t_pollable *const	pollable = arg;
-	t_ipc_message		response;
-
-	if (!pollable_read(pollable)) return ;
-
-	printf("pollable message\n");
-	response = supervisor()->handle_request(&pollable->message);
-	pollable_send(pollable, &response);
-	ipc_message_clear(&pollable->message);
-	ipc_message_clear(&response);
+	printf("new client added %i\n", new_fd);
+	server_register_reaction(new_fd,
+							 this,
+							 server_handle_ipc_client);
 }
 
 bool server_start(void)
@@ -114,7 +127,8 @@ bool server_start(void)
 
 	while (this->online)
 	{
-		if (poll(this->pollables->keys.data, this->pollables->keys.size, -1) < 0)
+		if (poll(this->subscriptions->keys.data,
+				 this->subscriptions->keys.size, -1) < 0)
 		{
 			if (errno == EINTR) continue;
 
@@ -122,10 +136,15 @@ bool server_start(void)
 			return (false);
 		}
 
-		this->pollables->for_each(this->pollables, call_pollable_handler);
-		server_clean_pollables(this->pollables);
+		this->subscriptions->for_each(this->subscriptions, call_event_handler);
+		server_clean_subscriptions(this->subscriptions);
 		printf("loop end\n");
 	}
 
 	return (true);
+}
+
+void	server_stop(void)
+{
+	server()->online = false;
 }

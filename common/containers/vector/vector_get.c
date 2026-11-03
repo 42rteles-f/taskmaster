@@ -1,4 +1,8 @@
+// Custom Headers
 #include "vector.h"
+
+// Standard Headers
+#include <stddef.h>
 
 inline void	*vector_end(const t_vector *const this)
 {

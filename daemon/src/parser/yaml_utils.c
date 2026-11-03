@@ -1,8 +1,11 @@
+// Custom Headers
+#include "parser_internal.h"
+
+// Standard Headers
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <yaml.h>
-
-#include "parser_internal.h"
 
 void	yaml_state_destroy(t_yaml_state *this)
 {
@@ -70,5 +73,43 @@ const char	*yaml_value_by_key(yaml_document_t *document,
 	value = yaml_node_by_key(document, mapping, wanted);
 	if (value == NULL || value->type != YAML_SCALAR_NODE)
 		return (NULL);
-	return (value->data.scalar.value);
+	return ((const char*)value->data.scalar.value);
+}
+
+bool	mapping_has_duplicate_keys(yaml_document_t *document,
+									yaml_node_t *mapping)
+{
+	yaml_node_t	*left_key;
+	yaml_node_t	*right_key;
+
+	if (!document || !mapping || mapping->type != YAML_MAPPING_NODE)
+		return (true);
+
+	for (
+		yaml_node_pair_t *left = mapping->data.mapping.pairs.start;
+		left < mapping->data.mapping.pairs.top;
+		left++
+	) {
+		left_key = yaml_document_get_node(document, left->key);
+		if (!left_key || left_key->type != YAML_SCALAR_NODE)
+			return (true);
+
+		for (
+			yaml_node_pair_t *right = left + 1;
+			right < mapping->data.mapping.pairs.top;
+			right++
+		) {
+			right_key = yaml_document_get_node(document, right->key);
+			if (!right_key || right_key->type != YAML_SCALAR_NODE)
+				return (true);
+
+			if (left_key->data.scalar.length
+					== right_key->data.scalar.length
+				&& memcmp(left_key->data.scalar.value,
+					right_key->data.scalar.value,
+					left_key->data.scalar.length) == 0)
+				return (true);
+		}
+	}
+	return (false);
 }

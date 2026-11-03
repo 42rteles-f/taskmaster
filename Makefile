@@ -23,18 +23,18 @@ CLI_SRCS        := cli/src/main.c \
 	cli/src/terminal/split.c \
 	cli/src/terminal/terminal.c
 
-# commands.c is not listed because supervisor.c includes it directly.
 DAEMON_SRCS     := daemon/src/main.c \
 	daemon/src/config/config.c \
 	daemon/src/parser/parser.c \
 	daemon/src/parser/yaml_utils.c \
+	daemon/src/program/process.c \
 	daemon/src/program/program.c \
-	daemon/src/server/pollable.c \
 	daemon/src/server/pollfd.c \
 	daemon/src/server/server.c \
 	daemon/src/server/server_setup.c \
 	daemon/src/supervisor/commands.c \
-	daemon/src/supervisor/supervisor.c
+	daemon/src/supervisor/supervisor.c \
+	daemon/src/supervisor/supervisor_signals.c
 
 COMMON_SRCS     := common/containers/indexmap/indexmap.c \
 	common/containers/indexmap/indexmap_setup.c \

@@ -2,6 +2,10 @@
 #include <server.h>
 #include "server_internal.h"
 
+// Standard Headers
+#include <stddef.h>
+#include <unistd.h>
+
 t_pollfd	pollfd_init(int fd)
 {
 	return ((t_pollfd){.fd = fd, .events = POLLIN});

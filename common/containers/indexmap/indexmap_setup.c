@@ -1,4 +1,9 @@
+// Custom Headers
 #include "indexmap.h"
+
+// Standard Headers
+#include <stddef.h>
+#include <stdlib.h>
 
 void	delete_indexmap(t_indexmap *this)
 {

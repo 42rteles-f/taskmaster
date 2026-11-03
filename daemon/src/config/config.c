@@ -1,6 +1,64 @@
+// Custom Headers
 #include <config.h>
+#include <indexmap.h>
+
+// Standard Headers
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include <signal.h>
+#include <string.h>
+#include <sys/types.h>
+
+t_config	config_init(void)
+{
+	t_config	config;
+
+	config = (t_config){
+		.numprocs = 1,
+		.umask = 022,
+		.autostart = AUTOSTART_TRUE,
+		.autorestart = AUTORESTART_UNEXPECTED,
+		.startretries = 3,
+		.starttime = 1,
+		.stopsignal = SIGTERM,
+		.stoptime = 10,
+		.env = init_strmap(sizeof(char *))
+	};
+	config.exitcodes[0] = true;
+	vector_strigfy(&config.env.values);
+	return (config);
+}
+
+void	config_destroy(void *element)
+{
+	t_config	*config;
+
+	if (!element) return;
+
+	config = element;
+	free(config->name);
+	free(config->cmd);
+	free(config->workingdir);
+	free(config->stdout_path);
+	free(config->stderr_path);
+	if (config->env.destroy) config->env.destroy(&config->env);
+	*config = (t_config){0};
+}
+
+void	config_move(t_config *dest, t_config *src)
+{
+	if (!dest || !src || dest == src)
+		return ;
+	config_destroy(dest);
+	*dest = *src;
+	*src = (t_config){0};
+}
+int	config_compare_name(const void *first, const void *second, size_t size)
+{
+	(void)size;
+	return (strcmp(((t_config*)first)->name, ((t_config*)second)->name));
+}
 
 static int	signal_number(const char *name)
 {
@@ -22,40 +80,6 @@ static int	signal_number(const char *name)
 			return (signals[i].number);
 	}
 	return (-1);
-}
-
-void	config_destroy(void *element)
-{
-	t_config	*config;
-
-	config = element;
-	free(config->name);
-	free(config->cmd);
-	free(config->workingdir);
-	free(config->stdout_path);
-	free(config->stderr_path);
-	config->env.destroy(&config->env);
-	*config = (t_config){0};
-}
-
-t_config	config_init(void)
-{
-	t_config	config;
-
-	config = (t_config){
-		.numprocs = 1,
-		.umask = 022,
-		.autostart = AUTOSTART_TRUE,
-		.autorestart = AUTORESTART_UNEXPECTED,
-		.startretries = 3,
-		.starttime = 1,
-		.stopsignal = SIGTERM,
-		.stoptime = 10,
-		.env = init_strmap(sizeof(char *))
-	};
-	config.exitcodes[0] = true;
-	vector_strigfy(&config.env.values);
-	return (config);
 }
 
 void	copy_string_from_scalar(const char *source, char **destination)

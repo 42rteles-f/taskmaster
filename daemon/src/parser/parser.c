@@ -1,7 +1,11 @@
+// Custom Headers
 #include <parser.h>
+#include <config.h>
+#include <vector.h>
 #include "parser_internal.h"
 
-#include <stdio.h>
+// Standard Headers
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <yaml.h>
@@ -108,12 +112,14 @@ static bool	populate_config_from_entry(t_config *config,
 
 	name = yaml_document_get_node(document, entry->key);
 	program = yaml_document_get_node(document, entry->value);
-	if (name == NULL || name->type != YAML_SCALAR_NODE
-		|| program == NULL || program->type != YAML_MAPPING_NODE)
+	if (name == NULL || name->type != YAML_SCALAR_NODE ||
+		program == NULL || program->type != YAML_MAPPING_NODE ||
+		mapping_has_duplicate_keys(document, program))
 		return (false);
+
 	config->name = strdup((char *)name->data.scalar.value);
-	if (!config->name)
-		return (false);
+	if (!config->name) return (false);
+
 	populate_config(config, document, program);
 	return (config_validate(config));
 }
@@ -124,7 +130,7 @@ static t_uovector	*extract_configs(yaml_node_t *programs, t_yaml_state *state)
 	t_config	*config;
 
 	vec = new_uovector(sizeof(t_config));
-	vector_custom(vec, NULL, NULL, config_destroy);
+	vector_custom(vec, NULL, config_compare_name, config_destroy);
 	for (
 		yaml_node_pair_t *pair = programs->data.mapping.pairs.start;
 		pair < programs->data.mapping.pairs.top;
@@ -132,7 +138,8 @@ static t_uovector	*extract_configs(yaml_node_t *programs, t_yaml_state *state)
 	) {
 		config = vec->emplace(vec);
 		*config = config_init();
-		if (!populate_config_from_entry(config, &state->document, pair)) {
+		if (!populate_config_from_entry(config, &state->document, pair) ||
+			vec->find(vec, config) != config) {
 			delete_vector(vec);
 			return (NULL);
 		}

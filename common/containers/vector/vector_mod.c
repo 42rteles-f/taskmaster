@@ -1,4 +1,9 @@
+// Custom Headers
 #include "vector.h"
+
+// Standard Headers
+#include <stddef.h>
+#include <string.h>
 
 void	*vector_push_back(t_vector *this, void *element)
 {
@@ -108,7 +113,9 @@ void	vector_insert(t_vector *this, void *element, size_t index)
 	this->size++;
 }
 
-void	vector_for_each(t_vector *this, void (*function)(void*, size_t))
+void	vector_for_each_ctx(t_vector *this,
+							void (*function)(void*, void*, size_t),
+							void *context)
 {
 	unsigned char	*const	end = vector_end(this);
 	unsigned char	*it;
@@ -118,9 +125,22 @@ void	vector_for_each(t_vector *this, void (*function)(void*, size_t))
 	index = 0;
 	while (it < end)
 	{
-		function(it, index);
+		function(it, context, index);
 		it += this->element_size;
 		index++;
+	}
+}
+
+void	vector_for_each(t_vector *this, void (*function)(void*))
+{
+	unsigned char	*const	end = vector_end(this);
+	unsigned char	*it;
+
+	it = this->data;
+	while (it < end)
+	{
+		function(it);
+		it += this->element_size;
 	}
 }
 
@@ -134,4 +154,13 @@ void	vector_push_batch(t_vector *this, void *batch, size_t count)
 
 	memmove(vector_end(this), batch, this->element_size * count);
 	this->size += count;
+}
+
+void	vector_clear(t_vector *this)
+{
+	if (this->destroy_element)
+	{
+		vector_for_each(this, this->destroy_element);
+	}
+	this->size = 0;
 }

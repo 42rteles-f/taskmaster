@@ -1,11 +1,15 @@
+// Custom Headers
 #include "ipc.h"
-#include <stdlib.h>
-#include <sys/socket.h>
+
+// Standard Headers
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/un.h>
+#include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 static int send_all(int fd, const void *buf, size_t len)
