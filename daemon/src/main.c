@@ -11,18 +11,20 @@ int	main(int argc, char **argv)
 	config_path = (argc > 1) ? argv[1] : SUPERVISOR_CONFIG_FILE;
 	configs = parse_yaml_file(config_path);
 
-	supervisor()->init();
-	supervisor()->sync(configs);
-	server()->init(supervisor_handle_request);
+	if (
+		supervisor()->init() &&
+		supervisor()->sync(&configs) &&
+		server()->init(supervisor_handle_request) &&
+		server()->register_event(supervisor()->signal_pipe[0], supervisor_handle_pipe, supervisor()) &&
+		server()->register_event(supervisor()->timer_fd, supervisor_handle_timer, supervisor())
+	) {
+		server()->start();
+		server()->unregister_event(supervisor()->signal_pipe[0]);
+		server()->unregister_event(supervisor()->timer_fd);
+	}
 
-	server()->register_event(supervisor()->signal_pipe[0], supervisor(), supervisor_handle_pipe);
-	server()->register_event(supervisor()->timer_fd, supervisor(), supervisor_handle_timer);
-
-	server()->start();
-
-	server()->unregister_event(supervisor()->signal_pipe[0]);
-	server()->unregister_event(supervisor()->timer_fd);
-
-	server()->destroy();
 	supervisor()->destroy();
+	server()->destroy();
+	delete_vector(configs);
+	return (0);
 }

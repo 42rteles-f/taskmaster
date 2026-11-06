@@ -15,17 +15,19 @@ struct s_program {
 	size_t		id;
 	size_t		next_slot_id;
 	bool		revised;
-	t_config	config;
+	t_config	*config;
 	t_uovector	processes;
 
 	void	*(*execute)();
 	void	(*sync)(t_program *this, t_config *config);
+	void	(*update)(t_program *this);
 	void	(*destroy)(void *this);
 };
 
 t_program	program_init(void);
 void		program_destroy(void *element);
 void		program_sync(t_program *this, t_config *new_config);
+void		program_update(t_program *this, struct timespec *now);
 int			program_cmp_str_name(const void *element, const void *name, size_t size);
 
 #endif

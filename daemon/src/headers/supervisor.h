@@ -23,7 +23,7 @@ typedef struct {
 	bool	(*init)(void);
 	bool	(*start)();
 	bool	(*update)();
-	bool	(*sync)(t_uovector *);
+	bool	(*sync)(t_uovector **);
 	bool	(*new_program)(t_config *);
 	void	(*shutdown)(void);
 	void	(*destroy)(void);
@@ -33,7 +33,7 @@ typedef struct {
 
 bool			supervisor_init(void);
 // bool			supervisor_update(void);
-bool			supervisor_sync(t_uovector *configs);
+bool			supervisor_sync(t_uovector **configs);
 void			supervisor_destroy(void);
 void			supervisor_handle_pipe(struct pollfd *pollfd, void *context);
 void			supervisor_handle_timer(struct pollfd *pollfd, void *context);

@@ -114,8 +114,8 @@ void	server_handle_connections(t_pollfd *pollfd, void *context)
 	}
 	printf("new client added %i\n", new_fd);
 	server_register_event(new_fd,
-							 this,
-							 server_handle_ipc_client);
+							 server_handle_ipc_client,
+							 this);
 }
 
 bool server_start(void)
@@ -128,7 +128,7 @@ bool server_start(void)
 	while (this->online)
 	{
 		if (poll(this->subscriptions->keys.data,
-				 this->subscriptions->keys.size, -1) < 0)
+				 this->subscriptions->keys.size,-1) < 0)
 		{
 			if (errno == EINTR) continue;
 

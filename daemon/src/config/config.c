@@ -30,6 +30,17 @@ t_config	config_init(void)
 	return (config);
 }
 
+t_config	*new_config(void)
+{
+	t_config	*config;
+
+	config = malloc(sizeof(*config));
+	if (!config)
+		return (NULL);
+	*config = config_init();
+	return (config);
+}
+
 void	config_destroy(void *element)
 {
 	t_config	*config;
@@ -44,6 +55,14 @@ void	config_destroy(void *element)
 	free(config->stderr_path);
 	if (config->env.destroy) config->env.destroy(&config->env);
 	*config = (t_config){0};
+}
+
+void	delete_config(t_config *config)
+{
+	if (!config)
+		return ;
+	config_destroy(config);
+	free(config);
 }
 
 void	config_move(t_config *dest, t_config *src)

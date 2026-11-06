@@ -27,7 +27,8 @@ bool	server_init(t_server_handler handler)
 	if (!handler) return (false);
 	if (this->initialized) return (true);
 
-	this->subscriptions = new_indexmap(sizeof(t_pollfd), sizeof(t_poll_event));
+	if (!(this->subscriptions = new_indexmap(sizeof(t_pollfd), sizeof(t_poll_event))))
+		return (false);
 	this->subscriptions->custom_keys(this->subscriptions,
 									 NULL,
 									 pollfd_compare,
@@ -38,15 +39,16 @@ bool	server_init(t_server_handler handler)
 }
 
 bool	server_register_event(int fd,
-								 void *context,
-								 void (*handler)(t_pollfd *pollfd, void *context))
+							  void (*handler)(t_pollfd *pollfd, void *context),
+							  void *context)
 {
 	t_server		*const this = server();
 	t_pollfd		key;
 	t_poll_event	value;
 
-	if (fd < 0 || !handler)
+	if (0 > fd || !handler)
 		return (false);
+
 	key = pollfd_init(fd);
 	value = (t_poll_event){
 		.context = context,
@@ -62,6 +64,8 @@ bool	server_unregister_event(int fd)
 	t_server	*const this = server();
 	t_pollfd	*found;
 	int			index;
+
+	if (!this->initialized) return ;
 
 	index = this->subscriptions->keys.get_index(&this->subscriptions->keys,
 											&(t_pollfd){.fd = fd});
@@ -89,7 +93,7 @@ bool	server_open_connections(t_server *const this)
 		goto error;
 	}
 
-	server_register_event(this->socket, this, server_handle_connections);
+	server_register_event(this->socket, server_handle_connections, this);
 	this->online = true;
 
     return (true);

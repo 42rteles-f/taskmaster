@@ -44,6 +44,8 @@ typedef struct s_config {
 
 void		config_destroy(void *element);
 t_config	config_init(void);
+t_config	*new_config(void);
+void		delete_config(t_config *config);
 void		config_move(t_config *dest, t_config *src);
 void		copy_string_from_scalar(const char *source, char **destination);
 void		copy_unsigned_from_scalar(const char *source,

@@ -9,6 +9,30 @@
 #include <stddef.h>
 #include <string.h>
 
+t_program	program_init(void)
+{
+	t_program	this;
+
+	this = (t_program) {
+		.processes = init_uovector(sizeof(t_process)),
+		.config = new_config(),
+		.sync = program_sync,
+		.update = program_update,
+		.destroy = program_destroy,
+	};
+	vector_custom(&this.processes, NULL, NULL, process_destroy);
+	return (this);
+}
+
+void	program_destroy(void *arg)
+{
+	t_program	*const this = arg;
+
+	vector_destroy(&this->processes);
+	delete_config(this->config);
+	*this = (t_program){};
+}
+
 static bool	safe_strcmp(const char *current, const char *next)
 {
 	if (!current || !next)
@@ -51,41 +75,18 @@ static bool	process_should_restart(const t_config *current,
 	);
 }
 
-t_program	program_init(void)
-{
-	t_program	this;
-
-	this = (t_program) {
-		.processes = init_uovector(sizeof(t_process)),
-		.config = config_init(),
-		.sync = program_sync,
-		.destroy = program_destroy,
-	};
-	vector_custom(&this.processes, NULL, NULL, process_destroy);
-	return (this);
-}
-
-void	program_destroy(void *arg)
-{
-	t_program	*const this = arg;
-
-	config_destroy(&this->config);
-	vector_destroy(&this->processes);
-	*this = (t_program){};
-}
-
 static void	program_sync_processes(t_program *this)
 {
 	t_process	*process;
 
-	while (this->processes.size < this->config.numprocs)
+	while (this->processes.size < this->config->numprocs)
 	{
 		process = this->processes.emplace(&this->processes);
-		*process = process_init(this->next_slot_id++);
-		if (!process_start(process, &this->config))
+		*process = process_init(this->next_slot_id++, this->config);
+		if (!process_start(process))
 			process->state = PROCESS_FATAL;
 	}
-	while (this->processes.size > this->config.numprocs)
+	while (this->processes.size > this->config->numprocs)
 	{
 		this->processes.remove_at(&this->processes, this->processes.size - 1);
 	}
@@ -93,15 +94,27 @@ static void	program_sync_processes(t_program *this)
 
 void	program_sync(t_program *this, t_config *new_config)
 {
-	if (process_should_restart(&this->config, new_config))
+	if (process_should_restart(this->config, new_config))
 		this->processes.clear(&this->processes);
 
-	config_move(&this->config, new_config);
+	config_move(this->config, new_config);
 	program_sync_processes(this);
 }
 
 int	program_cmp_str_name(const void *element, const void *name, size_t size)
 {
 	(void)size;
-	return (strcmp(((t_program*)element)->config.name, name));
+	return (strcmp(((t_program*)element)->config->name, name));
+}
+
+void	call_process_update(void *element, void *time, size_t index)
+{
+	(void)index;
+	process_update(element, time);
+}
+
+void	program_update(t_program *this, struct timespec *now)
+{
+	this->processes.for_each_ctx(&this->processes, call_process_update, now);
+	//TODO check process state
 }

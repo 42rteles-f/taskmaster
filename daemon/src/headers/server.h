@@ -38,8 +38,8 @@ typedef struct s_server
 	bool	(*init)(t_server_handler);
 	bool	(*start)(void);
 	bool	(*register_event)(int fd,
-								 void *context,
-								 void (*handler)(t_pollfd *pollfd, void *context));
+							  void (*handler)(t_pollfd *pollfd, void *context),
+							  void *context);
 	bool	(*unregister_event)(int fd);
 	void	(*stop)(void);
 	bool	(*destroy)(void);
@@ -52,7 +52,7 @@ bool		server_init(t_server_handler handler);
 bool		server_destroy(void);
 bool		server_open_connections(t_server *this);
 bool		server_register_event(int fd,
-									 void *context,
-									 void (*handler)(t_pollfd *pollfd, void *context));
+								  void (*handler)(t_pollfd *pollfd, void *context),
+								  void *context);
 bool		server_unregister_event(int fd);
 #endif

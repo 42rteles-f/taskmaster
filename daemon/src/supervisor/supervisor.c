@@ -28,15 +28,9 @@ t_supervisor	*supervisor(void)
 
 bool	supervisor_init(void)
 {
-	this.programs = new_uovector(sizeof(t_program));
+	if (!(this.programs = new_uovector(sizeof(t_program))))
+		return (false);
 	vector_custom(this.programs, NULL, program_cmp_str_name, program_destroy);
-
-	this.commands[IPC_STATUS] = supervisor_handle_status;
-	this.commands[IPC_START] = supervisor_handle_start;
-	this.commands[IPC_STOP] = supervisor_handle_stop;
-	this.commands[IPC_RESTART] = supervisor_handle_restart;
-	this.commands[IPC_RELOAD] = supervisor_handle_reload;
-	this.commands[IPC_SHUTDOWN] = supervisor_handle_shutdown;
 
 	if (!supervisor_setup_pipe() ||
 		!supervisor_activate_timer(&this) ||
@@ -45,6 +39,14 @@ bool	supervisor_init(void)
 		supervisor_destroy();
 		return (false);
 	}
+
+	this.commands[IPC_STATUS] = supervisor_handle_status;
+	this.commands[IPC_START] = supervisor_handle_start;
+	this.commands[IPC_STOP] = supervisor_handle_stop;
+	this.commands[IPC_RESTART] = supervisor_handle_restart;
+	this.commands[IPC_RELOAD] = supervisor_handle_reload;
+	this.commands[IPC_SHUTDOWN] = supervisor_handle_shutdown;
+
 	return (true);
 }
 
@@ -81,7 +83,7 @@ static void	supervisor_remove_unrevised(void)
 	{
 		program = this.programs->at(this.programs, index);
 		if (false == program->revised) {
-			printf("removing program: %s\n", program->config.name);
+			printf("removing program: %s\n", program->config->name);
 			this.programs->remove_at(this.programs, index);
 		}
 		else
@@ -103,9 +105,13 @@ void	supervisor_sync_program(void *config)
 	program->revised = true;
 }
 
-bool	supervisor_sync(t_uovector *configs)
+bool	supervisor_sync(t_uovector **src_configs)
 {
-	if (!configs) return (false);
+	t_uovector	*configs;
+
+	if (!src_configs || !(*src_configs)) return (false);
+	configs = *src_configs;
+	*src_configs = NULL;
 
 	this.programs->for_each(this.programs, set_program_unrevised);
 	configs->for_each(configs, supervisor_sync_program);

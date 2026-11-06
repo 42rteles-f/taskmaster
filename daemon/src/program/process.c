@@ -3,6 +3,7 @@
 #include <indexmap.h>
 
 // Standard Headers
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <fcntl.h>
@@ -12,10 +13,11 @@
 #include <time.h>
 #include <unistd.h>
 
-t_process	process_init(size_t slot_id)
+t_process	process_init(size_t slot_id, const t_config *config)
 {
 	return ((t_process){
 		.slot_id = slot_id,
+		.config = config,
 		.pid = -1,
 		.state = PROCESS_STOPPED,
 	});
@@ -33,6 +35,16 @@ void	process_destroy(void *element)
 void	process_stop(t_process *this)
 {
 	if (0 > this->pid) return ;
+}
+
+static void	process_change_state(t_process *this, t_process_state state)
+{
+	if (state == this->state)
+		return ;
+
+	this->state = state;
+	clock_gettime(CLOCK_MONOTONIC, &this->state_at);
+	//TODO logger here
 }
 
 static bool	redirect_output(const char *path, int target_fd)
@@ -98,8 +110,13 @@ static void	child_execute(const t_config *config)
 	_exit(127);
 }
 
-bool	process_start(t_process *process, const t_config *config)
+bool	process_start(t_process *process)
 {
+	const t_config	*config;
+
+	if (!process || !process->config)
+		return (false);
+	config = process->config;
 	process->pid = fork();
 	if (process->pid < 0) return (false);
 
@@ -108,8 +125,8 @@ bool	process_start(t_process *process, const t_config *config)
 
 	process->state = PROCESS_STARTING;
 	process->wait_status = 0;
-	clock_gettime(CLOCK_MONOTONIC, &process->state_since);
-	process->deadline = process->state_since;
+	clock_gettime(CLOCK_MONOTONIC, &process->state_at);
+	process->deadline = process->state_at;
 	process->deadline.tv_sec += config->starttime;
 	return (true);
 }
@@ -118,4 +135,35 @@ int	process_compare_id(const void *first, const void *second, size_t size)
 {
 	(void)size;
 	return (((t_process*)first)->slot_id - ((t_process*)second)->slot_id);
+}
+
+void	process_force_stop(t_process *this)
+{
+	char *reason;
+    int status;
+
+	if (PROCESS_EXTERMINATING == this->state || this->pid <= 0)
+        return;
+
+	if (kill(this->pid, SIGKILL) == 0 ||
+		errno == ESRCH)
+	{
+        process_change_state(this, PROCESS_EXTERMINATING);
+	}
+    else
+	{
+		reason = strerror(errno);
+		//TODO logger;
+	}
+}
+
+void	process_update(t_process *this, struct timespec *now)
+{
+	if (now->tv_sec < this->deadline.tv_sec)
+		return ;
+
+    if (PROCESS_STARTING == this->state)
+		process_change_state(this, PROCESS_RUNNING);
+	else if (PROCESS_STOPPING == this->state)
+		process_force_stop(this);
 }

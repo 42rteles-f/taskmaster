@@ -1,6 +1,7 @@
 // Custom Headers
 #include <supervisor.h>
 #include "supervisor_internal.h"
+#include <program.h>
 
 // Standard Headers
 #include <stdbool.h>
@@ -32,14 +33,29 @@ bool	supervisor_activate_timer(void)
 	return (true);
 }
 
+void	call_program_update(void* element, void *time, size_t index)
+{
+	(void)index;
+	program_update(element, time);
+}
+
+void	supervisor_periodic_check(t_supervisor *this)
+{
+	struct timespec		now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	this->programs->for_each_ctx(this->programs, call_program_update, &now);
+	// TODO remove programs based on this update
+}
+
 void	supervisor_handle_timer(struct pollfd *pollfd, void *context)
 {
 	t_supervisor *const	this = context;
-	uint64_t			expirations;
 
 	if (!(pollfd->revents & POLLIN))
 		return ;
-	if (read(pollfd->fd, &expirations, sizeof(expirations)) < 0)
+	if (read(pollfd->fd, &(uint64_t){}, sizeof(uint64_t)) < 0)
 		return ;
-	supervisor_check_processes();
+	
+	supervisor_periodic_check(this);
 }
