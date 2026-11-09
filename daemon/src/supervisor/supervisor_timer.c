@@ -45,7 +45,6 @@ void	supervisor_periodic_check(t_supervisor *this)
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	this->programs->for_each_ctx(this->programs, call_program_update, &now);
-	// TODO remove programs based on this update
 }
 
 void	supervisor_handle_timer(struct pollfd *pollfd, void *context)
@@ -56,6 +55,6 @@ void	supervisor_handle_timer(struct pollfd *pollfd, void *context)
 		return ;
 	if (read(pollfd->fd, &(uint64_t){}, sizeof(uint64_t)) < 0)
 		return ;
-	
+
 	supervisor_periodic_check(this);
 }

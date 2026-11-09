@@ -29,5 +29,6 @@ void		program_destroy(void *element);
 void		program_sync(t_program *this, t_config *new_config);
 void		program_update(t_program *this, struct timespec *now);
 int			program_cmp_str_name(const void *element, const void *name, size_t size);
+void		program_handle_child_exit(t_program *this, pid_t pid, int status, struct timespec *now);
 
 #endif

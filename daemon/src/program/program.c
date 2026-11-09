@@ -20,7 +20,7 @@ t_program	program_init(void)
 		.update = program_update,
 		.destroy = program_destroy,
 	};
-	vector_custom(&this.processes, NULL, NULL, process_destroy);
+	vector_custom(&this.processes, NULL, process_compare_pid, process_destroy);
 	return (this);
 }
 
@@ -52,8 +52,8 @@ static bool	environment_changed(const t_strmap *current,
 	for (size_t index = 0; index < current->keys.size; index++)
 	{
 		current_pair = current->at(current, index);
-		update_value = update->get((t_strmap *)update,
-				*(char **)current_pair.first);
+		update_value = update->get(update,
+								   *(char **)current_pair.first);
 		if (!update_value || safe_strcmp(*(char**)current_pair.second, update_value))
 			return (true);
 	}
@@ -110,11 +110,24 @@ int	program_cmp_str_name(const void *element, const void *name, size_t size)
 void	call_process_update(void *element, void *time, size_t index)
 {
 	(void)index;
-	process_update(element, time);
+	if (PROCESS_FATAL != ((t_process*)element)->state)
+	{
+		process_update(element, time);
+	}
 }
 
 void	program_update(t_program *this, struct timespec *now)
 {
 	this->processes.for_each_ctx(&this->processes, call_process_update, now);
 	//TODO check process state
+}
+
+void	program_handle_child_exit(t_program *this, pid_t pid, int status, struct timespec *now)
+{
+	t_process	*child;
+
+	child = this->processes.find(&this->processes, &pid);
+	if (!child) return ;
+
+	process_handle_exit(child, status, now);
 }

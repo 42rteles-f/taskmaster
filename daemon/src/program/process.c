@@ -9,9 +9,13 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+
+static void	process_change_state(t_process *this, t_process_state state);
 
 t_process	process_init(size_t slot_id, const t_config *config)
 {
@@ -28,22 +32,72 @@ void	process_destroy(void *element)
 	t_process	*process;
 
 	process = element;
-	process_stop(process);
+	process_force_stop(process);
 	*process = (t_process){.pid = -1};
 }
 
 void	process_stop(t_process *this)
 {
-	if (0 > this->pid) return ;
+	if (this->pid <= 0 ||
+		PROCESS_STOPPING == this->state ||
+		PROCESS_KILLING == this->state)
+		return ;
+
+	if (kill(this->pid, this->config->stopsignal) == 0)
+		process_change_state(this, PROCESS_STOPPING);
+	else if (errno == ESRCH)
+		process_change_state(this, PROCESS_KILLING);
+}
+
+void	process_force_stop(t_process *this)
+{
+	char *reason;
+    int status;
+
+	if (PROCESS_KILLING == this->state || this->pid <= 0)
+        return;
+
+	if (kill(this->pid, SIGKILL) == 0 ||
+		errno == ESRCH)
+	{
+        process_change_state(this, PROCESS_KILLING);
+	}
+    else
+	{
+		reason = strerror(errno);
+		//TODO logger;
+	}
+}
+
+static void	process_change_state_at(t_process *this, t_process_state state, struct timespec *now)
+{
+	if (state == this->state)
+		return ;
+		
+	this->state = state;
+	this->state_at = *now;
+
+	this->deadline = this->state_at;
+    if (PROCESS_STARTING == state)
+		this->deadline.tv_sec += this->config->starttime;
+	else if (PROCESS_STOPPING == state)
+		this->deadline.tv_sec += this->config->stoptime;
+	//TODO logger here
 }
 
 static void	process_change_state(t_process *this, t_process_state state)
 {
 	if (state == this->state)
 		return ;
-
+		
 	this->state = state;
 	clock_gettime(CLOCK_MONOTONIC, &this->state_at);
+
+	this->deadline = this->state_at;
+    if (PROCESS_STARTING == state)
+		this->deadline.tv_sec += this->config->starttime;
+	else if (PROCESS_STOPPING == state)
+		this->deadline.tv_sec += this->config->stoptime;
 	//TODO logger here
 }
 
@@ -110,50 +164,58 @@ static void	child_execute(const t_config *config)
 	_exit(127);
 }
 
-bool	process_start(t_process *process)
+bool	process_start(t_process *this)
 {
-	const t_config	*config;
-
-	if (!process || !process->config)
+	if (!this->config)
 		return (false);
-	config = process->config;
-	process->pid = fork();
-	if (process->pid < 0) return (false);
 
-	if (process->pid == 0)
-		child_execute(config);
+	this->pid = fork();
+	if (0 > this->pid) return (false);
 
-	process->state = PROCESS_STARTING;
-	process->wait_status = 0;
-	clock_gettime(CLOCK_MONOTONIC, &process->state_at);
-	process->deadline = process->state_at;
-	process->deadline.tv_sec += config->starttime;
+	if (this->pid == 0)
+		child_execute(this->config);
+
+	this->wait_status = 0;
+	process_change_state(this, PROCESS_STARTING);
 	return (true);
 }
 
-int	process_compare_id(const void *first, const void *second, size_t size)
+int	process_compare_pid(const void *first, const void *second, size_t size)
 {
 	(void)size;
-	return (((t_process*)first)->slot_id - ((t_process*)second)->slot_id);
+	return (((t_process*)first)->pid - *(int*)second);
 }
 
-void	process_force_stop(t_process *this)
+void process_handle_exit(t_process *this, int status, struct timespec *now)
 {
-	char *reason;
-    int status;
+	const t_process_state	current_state = this->state;
 
-	if (PROCESS_EXTERMINATING == this->state || this->pid <= 0)
-        return;
-
-	if (kill(this->pid, SIGKILL) == 0 ||
-		errno == ESRCH)
+	if (PROCESS_STOPPING == current_state ||
+		PROCESS_KILLING == current_state)
 	{
-        process_change_state(this, PROCESS_EXTERMINATING);
+		this->wait_status = status;
+		process_change_state_at(this, PROCESS_STOPPED, now);
+		return ;
 	}
-    else
+
+	process_change_state_at(this, PROCESS_BACKOFF, now);
+	if (current_state == this->state)
 	{
-		reason = strerror(errno);
-		//TODO logger;
+		if (this->retries > this->config->startretries)
+		{
+			process_change_state_at(this, PROCESS_FATAL, now);
+			// TODO log max retries.
+		}
+		else
+		{
+			process_start(this);
+			this->retries++;
+		}
+	}
+	else
+	{
+		this->retries = 0;
+		process_start(this);
 	}
 }
 
@@ -163,7 +225,7 @@ void	process_update(t_process *this, struct timespec *now)
 		return ;
 
     if (PROCESS_STARTING == this->state)
-		process_change_state(this, PROCESS_RUNNING);
+		process_change_state_at(this, PROCESS_RUNNING, now);
 	else if (PROCESS_STOPPING == this->state)
 		process_force_stop(this);
 }

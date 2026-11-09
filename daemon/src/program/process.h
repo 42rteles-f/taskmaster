@@ -10,13 +10,13 @@
 # include <sys/types.h>
 # include <time.h>
 
-typedef enum e_process_state {
+typedef enum {
 	PROCESS_STOPPED,
 	PROCESS_STARTING,
 	PROCESS_RUNNING,
 	PROCESS_STOPPING,
 	PROCESS_BACKOFF,
-	PROCESS_EXTERMINATING,
+	PROCESS_KILLING,
 	PROCESS_FATAL
 } t_process_state;
 
@@ -36,8 +36,8 @@ bool		process_start(t_process *process);
 void		process_stop(t_process *process);
 void		process_update(t_process *process, struct timespec *now);
 void		process_destroy(void *element);
-int			process_compare_id(const void *first, const void *second, size_t size);
+int			process_compare_pid(const void *first, const void *second, size_t size);
 void		process_force_stop(t_process *this);
-
+void		process_handle_exit(t_process *this, int status, struct timespec *now);
 
 #endif

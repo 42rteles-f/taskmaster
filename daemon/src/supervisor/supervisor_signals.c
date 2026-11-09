@@ -1,5 +1,6 @@
 // Custom Headers
 #include <supervisor.h>
+#include <program.h>
 #include "supervisor_internal.h"
 
 // Standard Headers
@@ -10,10 +11,35 @@
 #include <poll.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
-void	supervisor_handle_signal(const siginfo_t *signal_info)
+int	program_has_child(const void *element, const void *pid)
 {
-	(void)signal_info;
+	t_program	*const program = element;
+
+	return (program->processes.find(&program->processes, pid) != NULL);
+}
+
+void	supervisor_handle_signals(t_supervisor *this)
+{
+	pid_t			pid;
+	t_program		*parent;
+	int				status;
+	struct timespec	now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	while ((pid = waitpid(-1, &status, WNOHANG)))
+	{
+        if (pid == -1 && errno == EINTR)
+            continue;
+		
+		parent = this->programs->find_with(this->programs, &pid, program_has_child);
+		if (!parent) {
+			//TODO log the missing child
+			continue;
+		}
+		program_update_child(parent, pid, status, now);
+	}
 }
 
 static bool	set_pipe_flags(int fd)
@@ -35,6 +61,7 @@ bool	supervisor_setup_pipe(void)
 
 	if (pipe(this->signal_pipe) < 0)
 		return (false);
+
 	if (!set_pipe_flags(this->signal_pipe[0])
 		|| !set_pipe_flags(this->signal_pipe[1]))
 	{
@@ -49,26 +76,21 @@ bool	supervisor_setup_pipe(void)
 
 void	supervisor_handle_pipe(struct pollfd *pollfd, void *context)
 {
-	siginfo_t	signal_info;
-	ssize_t		bytes;
+	ssize_t 			bytes;
 
-	(void)context;
 	if (!(pollfd->revents & POLLIN))
 		return ;
-	while (true)
-	{
-		bytes = read(pollfd->fd, &signal_info, sizeof(signal_info));
-		if (bytes == (ssize_t)sizeof(signal_info))
-			supervisor_handle_signal(&signal_info);
-		else if (bytes < 0 && errno == EINTR)
-			continue ;
-		else
-			break ;
-	}
+
+	do {
+		bytes = read(pollfd->fd, (char[1024]){}, 1024);
+	} while (bytes > 0 || (bytes < 0 && errno == EINTR));
+
+	supervisor_handle_signals(context);
 }
 
-static void	signal_callback(int signal_number, siginfo_t *signal_info,
-		void *context)
+static void	signal_callback(int signal_number,
+							siginfo_t *signal_info,
+							void *context)
 {
 	(void)signal_number;
 	(void)context;
