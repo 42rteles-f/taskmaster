@@ -38,7 +38,7 @@ void	supervisor_handle_signals(t_supervisor *this)
 			//TODO log the missing child
 			continue;
 		}
-		program_update_child(parent, pid, status, now);
+		program_handle_child_exit(parent, pid, status, &now);
 	}
 }
 

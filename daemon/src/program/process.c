@@ -170,7 +170,10 @@ bool	process_start(t_process *this)
 		return (false);
 
 	this->pid = fork();
-	if (0 > this->pid) return (false);
+	if (0 > this->pid) {
+		process_change_state(this, PROCESS_FATAL);
+		return (false);
+	}
 
 	if (this->pid == 0)
 		child_execute(this->config);
@@ -221,7 +224,7 @@ void process_handle_exit(t_process *this, int status, struct timespec *now)
 
 void	process_update(t_process *this, struct timespec *now)
 {
-	if (now->tv_sec < this->deadline.tv_sec)
+	if (PROCESS_FATAL == this->state || now->tv_sec < this->deadline.tv_sec)
 		return ;
 
     if (PROCESS_STARTING == this->state)

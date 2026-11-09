@@ -14,6 +14,7 @@ t_program	program_init(void)
 	t_program	this;
 
 	this = (t_program) {
+		.state = PROGRAM_STOPPED,
 		.processes = init_uovector(sizeof(t_process)),
 		.config = new_config(),
 		.sync = program_sync,
@@ -75,7 +76,7 @@ static bool	process_should_restart(const t_config *current,
 	);
 }
 
-static void	program_sync_processes(t_program *this)
+static void	program_resize(t_program *this)
 {
 	t_process	*process;
 
@@ -83,8 +84,7 @@ static void	program_sync_processes(t_program *this)
 	{
 		process = this->processes.emplace(&this->processes);
 		*process = process_init(this->next_slot_id++, this->config);
-		if (!process_start(process))
-			process->state = PROCESS_FATAL;
+		process_start(process);
 	}
 	while (this->processes.size > this->config->numprocs)
 	{
@@ -95,10 +95,10 @@ static void	program_sync_processes(t_program *this)
 void	program_sync(t_program *this, t_config *new_config)
 {
 	if (process_should_restart(this->config, new_config))
-		this->processes.clear(&this->processes);
+		this->processes.for_each(&this->processes, process_restart);
 
 	config_move(this->config, new_config);
-	program_sync_processes(this);
+	program_resize(this);
 }
 
 int	program_cmp_str_name(const void *element, const void *name, size_t size)
@@ -118,8 +118,32 @@ void	call_process_update(void *element, void *time, size_t index)
 
 void	program_update(t_program *this, struct timespec *now)
 {
-	this->processes.for_each_ctx(&this->processes, call_process_update, now);
+	void *const		end = this->processes.end(&this->processes);
+	t_process_state	states[PROCESS_STATE_COUNT] = {};
+
+	for (
+		t_process* element = this->processes.data;
+		element < end;
+		element++
+	) {
+		process_update(element, now);
+		states[element->state]++;
+	}
+	program_update_state(this, states);
 	//TODO check process state
+}
+	// this->processes.for_each_ctx(&this->processes, call_process_update, now);
+
+
+void	program_restart(t_program *this)
+{
+	if (PROGRAM_STARTING == this->state ||
+		PROGRAM_STOPPING == this->state ||
+		PROGRAM_RESTARTING == this->state)
+		return ;
+
+	this->state = PROGRAM_RESTARTING;
+
 }
 
 void	program_handle_child_exit(t_program *this, pid_t pid, int status, struct timespec *now)
@@ -130,4 +154,10 @@ void	program_handle_child_exit(t_program *this, pid_t pid, int status, struct ti
 	if (!child) return ;
 
 	process_handle_exit(child, status, now);
+	if (PROCESS_FATAL == child->state) {
+		this->fatal_childs++;
+		this->state = (this->fatal_childs == this->processes.size)
+			? PROGRAM_FAILED
+			: PROGRAM_DEGRADED;
+	}
 }

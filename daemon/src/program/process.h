@@ -12,12 +12,13 @@
 
 typedef enum {
 	PROCESS_STOPPED,
+	PROCESS_STOPPING,
 	PROCESS_STARTING,
 	PROCESS_RUNNING,
-	PROCESS_STOPPING,
 	PROCESS_BACKOFF,
 	PROCESS_KILLING,
-	PROCESS_FATAL
+	PROCESS_FATAL,
+	PROCESS_STATE_COUNT,
 } t_process_state;
 
 typedef struct s_process {
@@ -33,6 +34,7 @@ typedef struct s_process {
 
 t_process	process_init(size_t slot_id, const t_config *config);
 bool		process_start(t_process *process);
+bool		process_restart(t_process *process);
 void		process_stop(t_process *process);
 void		process_update(t_process *process, struct timespec *now);
 void		process_destroy(void *element);

@@ -114,8 +114,8 @@ void	server_handle_connections(t_pollfd *pollfd, void *context)
 	}
 	printf("new client added %i\n", new_fd);
 	server_register_event(new_fd,
-							 server_handle_ipc_client,
-							 this);
+						  server_handle_ipc_client,
+						  this);
 }
 
 bool server_start(void)

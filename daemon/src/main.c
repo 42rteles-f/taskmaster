@@ -2,6 +2,7 @@
 #include <supervisor.h>
 #include <server.h>
 #include <parser.h>
+#include <vector.h>
 
 int	main(int argc, char **argv)
 {
