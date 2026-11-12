@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Taskmaster",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/daemon/taskmaster",
+            "args": [],
+            "cwd": "${workspaceFolder}/daemon",
+            "MIMode": "lldb",
+            "preLaunchTask": "Build Taskmaster",
+            "stopAtEntry": false,
+            "externalConsole": false
+        }
+    ]
+}

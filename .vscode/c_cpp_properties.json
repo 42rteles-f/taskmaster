@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Taskmaster",
+            "includePath": [
+                "${workspaceFolder}/daemon/src/logger/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/cc",
+            "cStandard": "c99",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}
